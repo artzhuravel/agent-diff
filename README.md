@@ -1,36 +1,36 @@
 # Agent Diff
 
-**Interactive environments for evaluating AI agents & RL training on replicas of 3rd party APIs like Linear or Slack.**
+**Interactive environments for evaluating AI agents & RL training on replicas of 3rd party APIs like Linear or Slack.** You run it locally (or deploy it), your agents call fake APIs, you get deterministic diffs. No external service, no rate limits, full control over test data and environments.
 
-## Supported API Methods
+## Supported APIs
 
-- **Slack** – core Web API coverage for conversations, chat, reactions, users, etc. - [`backend/src/services/slack/README.md`](backend/src/services/slack/README.md). 
+- **Slack** – core Web API coverage for conversations, chat, reactions, users, etc. Full list here [`backend/src/services/slack/README.md`](backend/src/services/slack/README.md). A few examples:
 
-- **Linear** – GraphQL API - [`backend/src/services/linear/README.md`](backend/src/services/linear/README.md). 
+  ```python
+  "chat.postMessage"  # post messages in seeded channels/DMs
+  "conversations.open"  # spin up IM/MPIM threads
+  "reactions.add"  # add emoji reactions to seeded messages
+  ```
 
-## Templates, Seeds & Environments
+- **Linear** – GraphQL API. See [`backend/src/services/linear/README.md`](backend/src/services/linear/README.md). 
 
-**Templates** are pre-configured database schemas that serve as the starting point for test environments. Think of them as snapshots of a service's state:
-- **Location**: Templates live in PostgreSQL schemas (e.g., `slack_default`, `linear_base`)
-- **Content**: Templates are seeded during startup time from seeds with data like users, channels, messages, issues, etc.
-- **Example Seeds**: **[slack_default](examples/slack/seeds/slack_bench_default.json)** - sample users, channels and messages.
-
-**Environments** are isolated, temporary copies of a template schema:
-- **URL**: Each environment has a unique service URL (e.g., `http://localhost:8000/api/env/{env_id}/services/slack`)
-- **Creation**: `client.init_env(templateService="slack", templateName="slack_default")`
-- **Cleanup**: `client.delete_env(envId)` or auto-expires after TTL
-  
-
+  ```python
+  "issues"            # list/filter issues with pagination
+  "teams"             # list teams
+  "issueCreate"       # create new issue
+  "issueUpdate"       # update issue (state, assignee, priority, etc.)
+  "commentCreate"     # add comment to issue
+  ```
 ## Quick Start
 
 ### 1. Install SDK
 
-**Python:**
+**Python:** [Python SDK docs](sdk/agent-diff-python/README.md)
 ```bash
 uv add agent-diff
 ```
 
-**TypeScript:** [SDK docs](sdk/agent-diff-ts/README.md)
+**TypeScript:** [TS SDK docs](sdk/agent-diff-ts/README.md)
 ```bash
 npm install agent-diff
 ```
@@ -100,6 +100,18 @@ print(diff.diff['deletes'])   # Deleted records
 client.delete_env(envId=env.environmentId)
 ```
 
+## Templates, Seeds & Environments
+
+**Templates** are pre-configured database schemas that serve as the starting point for test environments. Think of them as snapshots of a service's state:
+- **Location**: Templates live in PostgreSQL schemas (e.g., `slack_default`, `linear_base`)
+- **Content**: Templates are seeded during startup time from seeds with data like users, channels, messages, issues, etc.
+- **Example Seeds**: **[slack_default](examples/slack/seeds/slack_bench_default.json)** - sample users, channels and messages.
+
+**Environments** are isolated, temporary copies of a template schema:
+- **URL**: Each environment has a unique service URL (e.g., `http://localhost:8000/api/env/{env_id}/services/slack`)
+- **Creation**: `client.init_env(templateService="slack", templateName="slack_default")`
+- **Cleanup**: `client.delete_env(envId)` or auto-expires after TTL
+
 ## Evaluations & Test Suites
 
 Collections of test cases with assertions that you can run against agent runs using evaluations.
@@ -152,8 +164,6 @@ for test in suite['tests']:
 
 ## Training & Fine-tuning
 
-Agent Diff is perfect for generating training data for LLMs with tool calling capabilities:
-
 ### With Hugging Face (smolagents)
 
 ```python
@@ -203,6 +213,7 @@ for test in test_suite['tests']:
 dataset = Dataset.from_list(training_data)
 dataset.save_to_disk("agent_training_data")
 ```
+
 
 ## Documentation
 
