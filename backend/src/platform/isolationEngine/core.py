@@ -38,8 +38,28 @@ class CoreIsolationEngine:
 
         self.environment_handler.create_schema(environment_schema)
         self.environment_handler.migrate_schema(template_schema, environment_schema)
+
+        # Linear schemas have circular dependencies - use explicit table order
+        table_order = None
+        if template_schema.startswith("linear"):
+            table_order = [
+                "organizations", "users", "external_users", "teams", "workflow_states",
+                "team_memberships", "user_settings", "user_flags", "templates", "projects",
+                "project_labels", "project_milestones", "project_statuses", "cycles",
+                "issue_labels", "issues", "comments", "attachments", "reactions", "favorites",
+                "issue_histories", "issue_suggestions", "issue_relations", "customer_needs",
+                "documents", "document_contents", "drafts", "issue_drafts", "initiatives",
+                "initiative_updates", "initiative_histories", "initiative_relations",
+                "initiative_to_projects", "project_updates", "project_histories",
+                "project_relations", "posts", "notifications", "webhooks", "integrations",
+                "integrations_settings", "git_automation_states", "facets",
+                "triage_responsibilities", "agent_sessions", "organization_invites",
+                "organization_domains", "paid_subscriptions", "entity_external_links",
+                "issue_imports",
+            ]
+
         self.environment_handler.seed_data_from_template(
-            template_schema, environment_schema
+            template_schema, environment_schema, tables_order=table_order
         )
 
         expires_at = datetime.now() + timedelta(seconds=ttl_seconds)

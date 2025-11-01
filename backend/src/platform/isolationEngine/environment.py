@@ -103,7 +103,13 @@ class EnvironmentHandler:
         with engine.begin() as conn:
             meta = MetaData()
             meta.reflect(bind=engine, schema=template_schema)
-            ordered = [t.name for t in meta.sorted_tables]
+
+            # Use explicit table order if provided, otherwise auto-sort
+            if tables_order:
+                ordered = tables_order
+            else:
+                ordered = [t.name for t in meta.sorted_tables]
+
             for tbl in ordered:
                 conn.execute(
                     text(

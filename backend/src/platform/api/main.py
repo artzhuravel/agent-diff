@@ -41,17 +41,18 @@ def create_app():
     app.state.templateManager = templateManager
     app.state.sessions = sessions
 
-    platform_router = Router(
-        routes=platform_routes,
-        middleware=[Middleware(PlatformMiddleware, session_manager=sessions)],
-    )
-    app.mount("/api/platform", platform_router)
-
+    # Add middleware BEFORE mounting routes so it applies to mounted apps
     app.add_middleware(
         IsolationMiddleware,
         session_manager=sessions,
         core_isolation_engine=coreIsolationEngine,
     )
+
+    platform_router = Router(
+        routes=platform_routes,
+        middleware=[Middleware(PlatformMiddleware, session_manager=sessions)],
+    )
+    app.mount("/api/platform", platform_router)
 
     slack_router = Router(slack_routes)
     app.mount("/api/env/{env_id}/services/slack", slack_router)
@@ -60,11 +61,33 @@ def create_app():
     linear_type_defs = load_schema_from_path(linear_schema_path)
     linear_schema = make_executable_schema(linear_type_defs, query, mutation)
 
+    # Create context value function that extracts env_id and creates session
+    def linear_context_value(request):
+        path = request.url.path
+        if "/api/env/" in path:
+            path_parts = path.split("/")
+            env_id_index = path_parts.index("env") + 1 if "env" in path_parts else None
+            if env_id_index and env_id_index < len(path_parts):
+                env_id = path_parts[env_id_index]
+                session = sessions.get_session_for_environment(env_id)
+                return {
+                    "request": request,
+                    "session": session,
+                    "environment_id": env_id,
+                    "user_id": None,
+                    "impersonate_email": None,
+                }
+        raise PermissionError("missing environment identifier")
+
     linear_graphql = LinearGraphQL(
         linear_schema,
         coreIsolationEngine=coreIsolationEngine,
         coreEvaluationEngine=coreEvaluationEngine,
+        session_manager=sessions,
     )
+    # Override the context_value by setting it directly
+    linear_graphql.context_value = linear_context_value
+
     app.mount("/api/env/{env_id}/services/linear", linear_graphql)
 
     return app

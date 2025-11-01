@@ -13,6 +13,7 @@ Usage:
 import os
 import sys
 import json
+import re
 from pathlib import Path
 from uuid import uuid4
 
@@ -21,6 +22,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from sqlalchemy import create_engine, text
 from src.services.linear.database.schema import Base
 from src.services.linear.database import schema as linear_schema
+
+
+def quote_identifier(name: str) -> str:
+    """Quote a column name for PostgreSQL to preserve case sensitivity."""
+    return f'"{name}"'
 
 # Tables in foreign key dependency order
 TABLE_ORDER = [
@@ -109,24 +115,33 @@ def insert_seed_data(conn, schema_name: str, seed_data: dict):
         print(f"  Inserting {len(records)} {table_name}...")
 
         for record in records:
-            columns = ", ".join(record.keys())
-            placeholders = ", ".join([f":{k}" for k in record.keys()])
+            # Process values (convert dict/list to JSON strings) but keep original keys
+            processed_record = {}
+            for key, value in record.items():
+                if isinstance(value, (dict, list)):
+                    processed_record[key] = json.dumps(value)
+                else:
+                    processed_record[key] = value
+
+            # Quote column names to preserve camelCase
+            columns = ", ".join([quote_identifier(k) for k in processed_record.keys()])
+            placeholders = ", ".join([f":{k}" for k in processed_record.keys()])
             sql = f"INSERT INTO {schema_name}.{table_name} ({columns}) VALUES ({placeholders})"
-            conn.execute(text(sql), record)
+            conn.execute(text(sql), processed_record)
 
 
 def register_public_template(
     conn, *, service: str, name: str, location: str, description: str | None = None
 ):
-    """Register a template in platform meta DB as public (owner_scope='public')."""
+    """Register a template in platform meta DB as public (visibility='public')."""
     sql = text(
         """
         INSERT INTO public.environments (
-            id, service, name, version, owner_scope, description,
-            owner_org_id, owner_user_id, kind, location, created_at, updated_at
+            id, service, name, version, visibility, description,
+            owner_id, kind, location, created_at, updated_at
         ) VALUES (
             :id, :service, :name, :version, 'public', :description,
-            NULL, NULL, 'schema', :location, NOW(), NOW()
+            NULL, 'schema', :location, NOW(), NOW()
         )
         ON CONFLICT ON CONSTRAINT uq_environments_identity DO NOTHING
         """

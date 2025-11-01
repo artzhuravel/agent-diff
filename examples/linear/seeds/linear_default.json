@@ -178,7 +178,8 @@
       "slackNewIssue": true,
       "timezone": "America/Los_Angeles",
       "triageEnabled": false,
-      "upcomingCycleCount": 3.0
+      "upcomingCycleCount": 3.0,
+      "private": false
     },
     {
       "id": "TEAM02PROD",
@@ -222,7 +223,8 @@
       "slackNewIssue": true,
       "timezone": "America/Los_Angeles",
       "triageEnabled": false,
-      "upcomingCycleCount": 3.0
+      "upcomingCycleCount": 3.0,
+      "private": false
     }
   ],
   "workflow_states": [
