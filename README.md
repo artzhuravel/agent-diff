@@ -112,10 +112,15 @@ client.delete_env(envId=env.environmentId)
 - **Content**: Templates are seeded during startup time from seeds with data like users, channels, messages, issues, etc.
 - **Example Seeds**: **[slack_default](examples/slack/seeds/slack_bench_default.json)** - sample users, channels and messages.
 
+<img width="2330" height="688" alt="image" src="https://github.com/user-attachments/assets/481d3f40-e378-402c-9d3c-8a2ab75c880e" />
+
 **Environments** are isolated, temporary copies of a template schema:
 - **URL**: Each environment has a unique service URL (e.g., `http://localhost:8000/api/env/{env_id}/services/slack`)
-- **Creation**: `client.init_env(templateService="slack", templateName="slack_default")`
+- **Creation**: `client.init_env(templateService="slack", templateName="slack_default", impersonateUserId="U01AGENBOT9")`
 - **Cleanup**: `client.delete_env(envId)` or auto-expires after TTL
+
+<img width="2344" height="432" alt="image" src="https://github.com/user-attachments/assets/c61e93f2-1826-429e-8ee7-4a32f4172a38" />
+
 
 ## CodeExectuorProxy
 
@@ -128,6 +133,8 @@ Collections of test cases with assertions that you can run against agent runs us
 
 - **[slack_bench.json](examples/slack/testsuites/slack_bench.json)** - test cases covering message sending, channel ops, reactions, threading
 - **[Evaluation DSL](docs/evaluation-dsl.md)** - Check DSL docs on how it works.
+
+<img width="2516" height="1020" alt="image" src="https://github.com/user-attachments/assets/3270f1f1-5afa-4db2-97b0-c35c070ef44f" />
 
 
 To run evaluations:
