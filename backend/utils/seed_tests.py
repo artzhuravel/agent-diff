@@ -73,9 +73,15 @@ def main():
                 for membership in memberships:
                     session.delete(membership)
                 if test_ids:
+                    session.query(TestRun).filter(
+                        TestRun.test_id.in_(test_ids)
+                    ).delete(synchronize_session=False)
                     session.query(Test).filter(Test.id.in_(test_ids)).delete(
                         synchronize_session=False
                     )
+                session.query(TestRun).filter(
+                    TestRun.test_suite_id == existing_suite.id
+                ).delete(synchronize_session=False)
                 test_suite = existing_suite
                 test_suite.description = suite_description
             else:
