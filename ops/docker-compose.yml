@@ -5,6 +5,7 @@ services:
       POSTGRES_DB: diff_the_universe
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
