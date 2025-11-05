@@ -572,6 +572,41 @@
           }
         }
       ]
+    },
+    {
+      "id": "test_20",
+      "name": "Edit a thread message",
+      "prompt": "You've replied to one of the messages with a bad joke. Edit it, for 'I will make a proposal for auth improvements tommorow EOD'",
+      "type": "actionEval",
+      "seed_template": "slack_bench_default",
+      "impersonate_user_id": "U01AGENBOT9",
+      "assertions": [
+        {
+          "diff_type": "changed",
+          "entity": "messages",
+          "where": {
+            "channel_id": {
+              "eq": "C03IJKL9012"
+            },
+            "parent_id": {
+              "eq": "1700143200.000999"
+            },
+            "message_id": {
+              "eq": "1700153200.000999"
+            },
+            "user_id": {
+              "eq": "U01AGENBOT9"
+            }
+          },
+          "expected_changes": {
+            "message_text": {
+              "to": {
+                "contains": "I will make a proposal for auth improvements tomorrow EOD"
+              }
+            }
+          }
+        }
+      ]
     }
   ]
 }

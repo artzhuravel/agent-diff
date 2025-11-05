@@ -525,6 +525,8 @@ async def chat_update(request: Request) -> JSONResponse:
         message_payload["attachments"] = attachments
     if _has_content(blocks):
         message_payload["blocks"] = blocks
+    if message.parent_id:
+        message_payload["thread_ts"] = message.parent_id
 
     return _json_response(response)
 
@@ -789,6 +791,138 @@ async def conversations_history(request: Request) -> JSONResponse:
         response["latest"] = latest_param
 
     return _json_response(response)
+
+
+async def conversations_replies(request: Request) -> JSONResponse:
+    from datetime import datetime
+
+    params = await _get_params_async(request)
+    channel = params.get("channel")
+    thread_ts = params.get("ts")
+
+    if not channel:
+        _slack_error("channel_not_found")
+    if not thread_ts:
+        _slack_error("thread_not_found")
+
+    try:
+        limit = int(params.get("limit", 100))
+    except (TypeError, ValueError):
+        _slack_error("invalid_limit")
+    if limit < 1 or limit > 1000:
+        _slack_error("invalid_limit")
+
+    cursor_param = params.get("cursor")
+    if cursor_param is None or cursor_param == "":
+        cursor = 0
+    else:
+        try:
+            cursor = _decode_cursor(cursor_param)
+        except ValueError:
+            _slack_error("invalid_cursor")
+
+    oldest_param = params.get("oldest")
+    latest_param = params.get("latest")
+    inclusive = params.get("inclusive", "false").lower() == "true"
+
+    oldest_dt = None
+    latest_dt = None
+    if oldest_param:
+        try:
+            oldest_dt = datetime.fromtimestamp(float(oldest_param))
+        except ValueError:
+            _slack_error("invalid_ts_oldest")
+    if latest_param:
+        try:
+            latest_dt = datetime.fromtimestamp(float(latest_param))
+        except ValueError:
+            _slack_error("invalid_ts_latest")
+
+    session = _session(request)
+    actor_id = _principal_user_id(request)
+    channel_id = _resolve_channel_id(channel)
+    ch = session.get(Channel, channel_id)
+    if ch is None:
+        _slack_error("channel_not_found")
+
+    if session.get(ChannelMember, (channel_id, actor_id)) is None:
+        _slack_error("not_in_channel")
+
+    team_id = _get_env_team_id(request, channel_id=channel_id, actor_user_id=actor_id)
+
+    thread_message = session.get(Message, thread_ts)
+    if thread_message is None or thread_message.channel_id != channel_id:
+        _slack_error("thread_not_found")
+
+    if thread_message.parent_id:
+        thread_root_ts = thread_message.parent_id
+        thread_root = session.get(Message, thread_root_ts)
+        if thread_root is None or thread_root.channel_id != channel_id:
+            _slack_error("thread_not_found")
+    else:
+        thread_root_ts = thread_message.message_id
+        thread_root = thread_message
+
+    try:
+        thread_messages = ops.list_thread_messages(
+            session=session,
+            channel_id=channel_id,
+            user_id=actor_id,
+            team_id=team_id,
+            thread_root_ts=thread_root_ts,
+            limit=limit + 1,
+            offset=cursor,
+            oldest=oldest_dt,
+            latest=latest_dt,
+            inclusive=inclusive,
+        )
+    except ValueError as exc:
+        if "thread_not_found" in str(exc):
+            _slack_error("thread_not_found")
+        raise
+
+    has_more = len(thread_messages) > limit
+    if has_more:
+        thread_messages = thread_messages[:limit]
+
+    reply_count = ops.count_thread_replies(
+        session=session, channel_id=channel_id, thread_root_ts=thread_root_ts
+    )
+
+    messages_payload: list[dict[str, Any]] = []
+    last_read_ts = (
+        thread_messages[-1].message_id if thread_messages else thread_root.message_id
+    )
+
+    for msg in thread_messages:
+        payload: dict[str, Any] = {
+            "type": "message",
+            "user": _format_user_id(msg.user_id),
+            "text": msg.message_text or "",
+            "ts": msg.message_id,
+            "thread_ts": thread_root_ts,
+        }
+
+        if msg.message_id == thread_root_ts:
+            payload["reply_count"] = reply_count
+            payload["subscribed"] = True
+            payload["last_read"] = last_read_ts
+            payload["unread_count"] = 0
+        else:
+            payload["parent_user_id"] = _format_user_id(thread_root.user_id)
+
+        messages_payload.append(payload)
+
+    next_cursor = _encode_cursor(cursor + len(thread_messages)) if has_more else ""
+
+    return _json_response(
+        {
+            "ok": True,
+            "messages": messages_payload,
+            "has_more": has_more,
+            "response_metadata": {"next_cursor": next_cursor},
+        }
+    )
 
 
 async def conversations_join(request: Request) -> JSONResponse:
@@ -2513,6 +2647,7 @@ SLACK_HANDLERS: dict[str, Callable[[Request], Awaitable[JSONResponse]]] = {
     "conversations.create": conversations_create,
     "conversations.list": conversations_list,
     "conversations.history": conversations_history,
+    "conversations.replies": conversations_replies,
     "conversations.info": conversations_info,
     "conversations.join": conversations_join,
     "conversations.invite": conversations_invite,

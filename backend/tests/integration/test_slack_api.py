@@ -138,6 +138,41 @@ class TestChatUpdate:
         assert data["ok"] is False
         assert data["error"] == "no_text"
 
+    async def test_update_thread_message(self, slack_client: AsyncClient):
+        reply_resp = await slack_client.post(
+            "/chat.postMessage",
+            json={
+                "channel": CHANNEL_GENERAL,
+                "text": "Thread original",
+                "thread_ts": MESSAGE_1,
+            },
+        )
+        assert reply_resp.status_code == 200
+        reply_ts = reply_resp.json()["ts"]
+
+        update_resp = await slack_client.post(
+            "/chat.update",
+            json={
+                "channel": CHANNEL_GENERAL,
+                "ts": reply_ts,
+                "text": "Thread updated",
+            },
+        )
+        assert update_resp.status_code == 200
+        update_data = update_resp.json()
+        assert update_data["ok"] is True
+        assert update_data["text"] == "Thread updated"
+        assert update_data["message"]["thread_ts"] == MESSAGE_1
+
+        history_resp = await slack_client.get(
+            f"/conversations.history?channel={CHANNEL_GENERAL}&limit=20"
+        )
+        assert history_resp.status_code == 200
+        messages = history_resp.json()["messages"]
+        updated_msg = next((m for m in messages if m["ts"] == reply_ts), None)
+        assert updated_msg is not None
+        assert updated_msg["text"] == "Thread updated"
+
 
 @pytest.mark.asyncio
 class TestChatDelete:
@@ -324,6 +359,97 @@ class TestConversationsHistory:
         data = response.json()
         assert data["ok"] is False
         assert data["error"] in ["channel_not_found", "not_in_channel"]
+
+
+@pytest.mark.asyncio
+class TestConversationsReplies:
+    async def test_get_thread_replies(self, slack_client: AsyncClient):
+        parent_resp = await slack_client.post(
+            "/chat.postMessage",
+            json={"channel": CHANNEL_GENERAL, "text": "Thread root message"},
+        )
+        assert parent_resp.status_code == 200
+        parent_ts = parent_resp.json()["ts"]
+
+        reply1 = await slack_client.post(
+            "/chat.postMessage",
+            json={
+                "channel": CHANNEL_GENERAL,
+                "text": "First reply",
+                "thread_ts": parent_ts,
+            },
+        )
+        assert reply1.status_code == 200
+
+        reply2 = await slack_client.post(
+            "/chat.postMessage",
+            json={
+                "channel": CHANNEL_GENERAL,
+                "text": "Second reply",
+                "thread_ts": parent_ts,
+            },
+        )
+        assert reply2.status_code == 200
+
+        response = await slack_client.get(
+            f"/conversations.replies?channel={CHANNEL_GENERAL}&ts={parent_ts}"
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["ok"] is True
+        assert data["has_more"] is False
+        assert "response_metadata" in data
+        assert data["response_metadata"]["next_cursor"] == ""
+
+        messages = data["messages"]
+        assert len(messages) == 3
+
+        root = messages[0]
+        assert root["ts"] == parent_ts
+        assert root["thread_ts"] == parent_ts
+        assert root["reply_count"] == 2
+        assert root["subscribed"] is True
+        assert root["unread_count"] == 0
+        assert root["last_read"] == messages[-1]["ts"]
+
+        first_reply = messages[1]
+        assert first_reply["parent_user_id"] == USER_AGENT
+        assert first_reply["thread_ts"] == parent_ts
+
+    async def test_replies_with_reply_ts(self, slack_client: AsyncClient):
+        parent_resp = await slack_client.post(
+            "/chat.postMessage",
+            json={"channel": CHANNEL_GENERAL, "text": "Thread root for reply ts"},
+        )
+        parent_ts = parent_resp.json()["ts"]
+
+        reply_resp = await slack_client.post(
+            "/chat.postMessage",
+            json={
+                "channel": CHANNEL_GENERAL,
+                "text": "Thread reply for alternate fetch",
+                "thread_ts": parent_ts,
+            },
+        )
+        reply_ts = reply_resp.json()["ts"]
+
+        response = await slack_client.get(
+            f"/conversations.replies?channel={CHANNEL_GENERAL}&ts={reply_ts}"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert any(msg["ts"] == reply_ts for msg in data["messages"])
+
+    async def test_replies_thread_not_found(self, slack_client: AsyncClient):
+        response = await slack_client.get(
+            "/conversations.replies?channel=C01ABCD1234&ts=9999999999.999999"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert data["error"] == "thread_not_found"
 
 
 @pytest.mark.asyncio
