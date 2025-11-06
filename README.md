@@ -175,8 +175,8 @@ for test in suite.tests:
 
     #This function will take a 2nd snapshot, run diff and assert results against expected state defined in test suite
     
-    #returns score runId, status and score (0/1)
-    score = client.evaluate_run(runId=run.runId)
+    #computes eval
+    client.evaluate_run(runId=run.runId)
     
     #returns score runId, full diff and score (0/1)
     run_result = client.get_results_for_run(runId=run.runId)
