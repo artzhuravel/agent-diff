@@ -253,7 +253,7 @@
     {
       "id": "test_10",
       "name": "Add emoji reaction",
-      "prompt": "React with :thumbsup: to the newest message in #general",
+      "prompt": "React with :thumbsup: to the most recent posted message in #general",
       "type": "actionEval",
       "seed_template": "slack_bench_default",
       "impersonate_user_id": "U01AGENBOT9",
@@ -308,7 +308,7 @@
       "prompt": "Find the message that says 'Hey team' and edit it to say 'Hello everyone'",
       "type": "actionEval",
       "seed_template": "slack_bench_default",
-      "impersonate_user_id": "U02JOHNDOE1",
+      "impersonate_user_id": "U01AGENBOT9",
       "assertions": [
         {
           "diff_type": "changed",
@@ -393,7 +393,7 @@
     {
       "id": "test_15",
       "name": "Delete old message",
-      "prompt": "Delete the message about deployment from #general",
+      "prompt": "Delete the message about new feature you posted in #general",
       "type": "actionEval",
       "seed_template": "slack_bench_default",
       "impersonate_user_id": "U01AGENBOT9",
@@ -406,7 +406,7 @@
               "eq": "C01ABCD1234"
             },
             "message_text": {
-              "contains": "deployment"
+              "contains": "new feature"
             }
           },
           "expected_count": 1
@@ -567,6 +567,41 @@
             "message_text": {
               "to": {
                 "regex": "(?=.*'500 errors')(?=.*'invalid_grant')(?=.*'login rate limit')(?=.*'login endpoint')(?=.*'captcha')(?=.*'empty password')"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "test_20",
+      "name": "Edit a thread message",
+      "prompt": "You've replied to one of the messages with a bad joke. Edit it, for 'I will make a proposal for auth improvements tommorow EOD'",
+      "type": "actionEval",
+      "seed_template": "slack_bench_default",
+      "impersonate_user_id": "U01AGENBOT9",
+      "assertions": [
+        {
+          "diff_type": "changed",
+          "entity": "messages",
+          "where": {
+            "channel_id": {
+              "eq": "C03IJKL9012"
+            },
+            "parent_id": {
+              "eq": "1700143200.000999"
+            },
+            "message_id": {
+              "eq": "1700153200.000999"
+            },
+            "user_id": {
+              "eq": "U01AGENBOT9"
+            }
+          },
+          "expected_changes": {
+            "message_text": {
+              "to": {
+                "contains": "I will make a proposal for auth improvements tomorrow EOD"
               }
             }
           }
