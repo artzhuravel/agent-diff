@@ -296,7 +296,7 @@
       "impersonate_user_id": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
       "assertions": [
         {
-          "diff_type": "added",
+          "diff_type": "changed",
           "entity": "issues",
           "where": {
             "identifier": {
@@ -323,7 +323,7 @@
       "impersonate_user_id": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
       "assertions": [
         {
-          "diff_type": "added",
+          "diff_type": "changed",
           "entity": "issues",
           "where": {
             "identifier": {
@@ -376,7 +376,7 @@
       "impersonate_user_id": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
       "assertions": [
         {
-          "diff_type": "added",
+          "diff_type": "changed",
           "entity": "issues",
           "where": {
             "identifier": {
@@ -665,7 +665,7 @@
           "expected_count": 1
         },
         {
-          "diff_type": "added",
+          "diff_type": "changed",
           "entity": "issues",
           "where": {
             "identifier": {
