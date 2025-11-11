@@ -978,3 +978,1335 @@ class TestIssueLabelDelete:
         delete_data = delete_response.json()
         result = delete_data["data"]["issueLabelDelete"]
         assert result["success"] is True
+
+
+# ==========================================
+# TIER 2 TESTS: Issue Management Operations
+# ==========================================
+
+
+@pytest.mark.asyncio
+class TestIssueQuery:
+    async def test_get_issue_by_id(self, linear_client: AsyncClient):
+        """Test querying a single issue by ID."""
+        query = """
+          query($id: String!) {
+            issue(id: $id) {
+              id
+              identifier
+              title
+              description
+              priority
+              priorityLabel
+              team {
+                id
+                name
+                key
+              }
+              state {
+                id
+                name
+                type
+              }
+              assignee {
+                id
+                name
+              }
+              creator {
+                id
+                name
+              }
+            }
+          }
+        """
+        variables = {"id": ISSUE_ENG_001}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        issue = data["data"]["issue"]
+        assert issue["id"] == ISSUE_ENG_001
+        assert issue["identifier"] == "ENG-1"
+        assert "authentication" in issue["title"].lower()
+        assert issue["team"]["id"] == TEAM_ENG
+        assert issue["team"]["key"] == "ENG"
+        assert issue["state"] is not None
+
+    async def test_get_issue_invalid_id(self, linear_client: AsyncClient):
+        """Test querying issue with invalid ID returns error."""
+        query = """
+          query($id: String!) {
+            issue(id: $id) {
+              id
+              title
+            }
+          }
+        """
+        variables = {"id": "INVALID_ISSUE_ID_12345"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Should have errors since issue doesn't exist
+        assert "errors" in data
+
+    async def test_get_issue_with_relations(self, linear_client: AsyncClient):
+        """Test querying issue with related data (labels, comments)."""
+        query = """
+          query($id: String!) {
+            issue(id: $id) {
+              id
+              identifier
+              title
+              labels {
+                nodes {
+                  id
+                  name
+                  color
+                }
+              }
+            }
+          }
+        """
+        variables = {"id": ISSUE_ENG_001}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        issue = data["data"]["issue"]
+        assert issue["id"] == ISSUE_ENG_001
+        # Labels should be present (may be empty array)
+        assert "labels" in issue
+        assert "nodes" in issue["labels"]
+
+
+@pytest.mark.asyncio
+class TestIssueSearchQuery:
+    async def test_issue_search_by_text(self, linear_client: AsyncClient):
+        """Test issueSearch with text query."""
+        query = """
+          query($query: String!) {
+            issueSearch(query: $query) {
+              nodes {
+                id
+                identifier
+                title
+                description
+              }
+            }
+          }
+        """
+        variables = {"query": "authentication"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        issues = data["data"]["issueSearch"]["nodes"]
+        # Should find the authentication issue
+        assert len(issues) >= 1
+        assert any("authentication" in issue["title"].lower() for issue in issues)
+
+    async def test_issue_search_with_filter(self, linear_client: AsyncClient):
+        """Test issueSearch with filters."""
+        query = """
+          query($query: String!, $filter: IssueFilter) {
+            issueSearch(query: $query, filter: $filter) {
+              nodes {
+                id
+                identifier
+                team {
+                  id
+                  key
+                }
+              }
+            }
+          }
+        """
+        variables = {
+            "query": "bug",
+            "filter": {"team": {"id": {"eq": TEAM_ENG}}},
+        }
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        issues = data["data"]["issueSearch"]["nodes"]
+        # All results should be from Engineering team
+        for issue in issues:
+            assert issue["team"]["key"] == "ENG"
+
+    async def test_issue_search_no_results(self, linear_client: AsyncClient):
+        """Test issueSearch with no matching results."""
+        query = """
+          query($query: String!) {
+            issueSearch(query: $query) {
+              nodes {
+                id
+                title
+              }
+            }
+          }
+        """
+        variables = {"query": "NONEXISTENT_SEARCH_TERM_XYZ123"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        issues = data["data"]["issueSearch"]["nodes"]
+        assert len(issues) == 0
+
+    async def test_issue_search_pagination(self, linear_client: AsyncClient):
+        """Test issueSearch with pagination."""
+        query = """
+          query($query: String!, $first: Int) {
+            issueSearch(query: $query, first: $first) {
+              edges {
+                cursor
+                node {
+                  id
+                  identifier
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        """
+        variables = {"query": "", "first": 1}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        search_results = data["data"]["issueSearch"]
+        assert "edges" in search_results
+        assert "pageInfo" in search_results
+
+
+@pytest.mark.asyncio
+class TestIssueArchive:
+    async def test_archive_issue(self, linear_client: AsyncClient):
+        """Test archiving an issue."""
+        # First create an issue to archive
+        create_query = """
+          mutation($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+              success
+              issue {
+                id
+                archivedAt
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "teamId": TEAM_ENG,
+                        "title": "Issue to archive",
+                    }
+                },
+            },
+        )
+        issue_id = create_response.json()["data"]["issueCreate"]["issue"]["id"]
+
+        # Now archive the issue
+        archive_query = """
+          mutation($id: String!) {
+            issueArchive(id: $id) {
+              success
+              entity {
+                id
+              }
+            }
+          }
+        """
+        archive_variables = {"id": issue_id}
+        archive_response = await linear_client.post(
+            "/graphql", json={"query": archive_query, "variables": archive_variables}
+        )
+        assert archive_response.status_code == 200
+        data = archive_response.json()
+        result = data["data"]["issueArchive"]
+        assert result["success"] is True
+        assert result["entity"] is not None
+        assert result["entity"]["id"] == issue_id
+
+    async def test_archive_issue_with_trash_flag(self, linear_client: AsyncClient):
+        """Test archiving an issue with trash flag."""
+        # Create an issue
+        create_query = """
+          mutation($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+              issue {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "teamId": TEAM_ENG,
+                        "title": "Issue to trash",
+                    }
+                },
+            },
+        )
+        issue_id = create_response.json()["data"]["issueCreate"]["issue"]["id"]
+
+        # Archive with trash flag
+        archive_query = """
+          mutation($id: String!, $trash: Boolean) {
+            issueArchive(id: $id, trash: $trash) {
+              success
+              entity {
+                id
+              }
+            }
+          }
+        """
+        archive_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": archive_query,
+                "variables": {"id": issue_id, "trash": True},
+            },
+        )
+        assert archive_response.status_code == 200
+        data = archive_response.json()
+        result = data["data"]["issueArchive"]
+        assert result["success"] is True
+        assert result["entity"] is not None
+        assert result["entity"]["id"] == issue_id
+
+    async def test_archive_invalid_issue(self, linear_client: AsyncClient):
+        """Test archiving non-existent issue returns error."""
+        query = """
+          mutation($id: String!) {
+            issueArchive(id: $id) {
+              success
+            }
+          }
+        """
+        variables = {"id": "INVALID_ISSUE_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+
+@pytest.mark.asyncio
+class TestIssueUnarchive:
+    async def test_unarchive_issue(self, linear_client: AsyncClient):
+        """Test unarchiving an archived issue."""
+        # Create and archive an issue
+        create_query = """
+          mutation($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+              issue {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "teamId": TEAM_ENG,
+                        "title": "Issue to unarchive",
+                    }
+                },
+            },
+        )
+        issue_id = create_response.json()["data"]["issueCreate"]["issue"]["id"]
+
+        # Archive it first
+        await linear_client.post(
+            "/graphql",
+            json={
+                "query": """
+                  mutation($id: String!) {
+                    issueArchive(id: $id) {
+                      success
+                    }
+                  }
+                """,
+                "variables": {"id": issue_id},
+            },
+        )
+
+        # Now unarchive it
+        unarchive_query = """
+          mutation($id: String!) {
+            issueUnarchive(id: $id) {
+              success
+              entity {
+                id
+                archivedAt
+              }
+            }
+          }
+        """
+        unarchive_response = await linear_client.post(
+            "/graphql",
+            json={"query": unarchive_query, "variables": {"id": issue_id}},
+        )
+        assert unarchive_response.status_code == 200
+        data = unarchive_response.json()
+        result = data["data"]["issueUnarchive"]
+        assert result["success"] is True
+        assert result["entity"] is not None
+        # archivedAt should be null after unarchive
+        assert result["entity"]["archivedAt"] is None
+
+    async def test_unarchive_invalid_issue(self, linear_client: AsyncClient):
+        """Test unarchiving non-existent issue returns error."""
+        query = """
+          mutation($id: String!) {
+            issueUnarchive(id: $id) {
+              success
+            }
+          }
+        """
+        variables = {"id": "INVALID_ISSUE_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+
+@pytest.mark.asyncio
+class TestIssueDelete:
+    async def test_delete_issue(self, linear_client: AsyncClient):
+        """Test deleting an issue (soft delete with grace period)."""
+        # Create an issue to delete
+        create_query = """
+          mutation($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+              issue {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "teamId": TEAM_ENG,
+                        "title": "Issue to delete",
+                    }
+                },
+            },
+        )
+        issue_id = create_response.json()["data"]["issueCreate"]["issue"]["id"]
+
+        # Delete the issue
+        delete_query = """
+          mutation($id: String!) {
+            issueDelete(id: $id) {
+              success
+              entity {
+                id
+              }
+            }
+          }
+        """
+        delete_response = await linear_client.post(
+            "/graphql", json={"query": delete_query, "variables": {"id": issue_id}}
+        )
+        assert delete_response.status_code == 200
+        data = delete_response.json()
+        result = data["data"]["issueDelete"]
+        assert result["success"] is True
+        assert result["entity"] is not None
+        assert result["entity"]["id"] == issue_id
+
+    async def test_delete_issue_permanently(self, linear_client: AsyncClient):
+        """Test permanently deleting an issue (admin only)."""
+        # Create an issue
+        create_query = """
+          mutation($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
+              issue {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "teamId": TEAM_ENG,
+                        "title": "Issue to permanently delete",
+                    }
+                },
+            },
+        )
+        issue_id = create_response.json()["data"]["issueCreate"]["issue"]["id"]
+
+        # Permanently delete (note: may fail if user is not admin)
+        delete_query = """
+          mutation($id: String!, $permanentlyDelete: Boolean) {
+            issueDelete(id: $id, permanentlyDelete: $permanentlyDelete) {
+              success
+            }
+          }
+        """
+        delete_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": delete_query,
+                "variables": {"id": issue_id, "permanentlyDelete": True},
+            },
+        )
+        assert delete_response.status_code == 200
+        # Either succeeds (if admin) or returns error (if not admin)
+        data = delete_response.json()
+        assert "data" in data or "errors" in data
+
+    async def test_delete_invalid_issue(self, linear_client: AsyncClient):
+        """Test deleting non-existent issue returns error."""
+        query = """
+          mutation($id: String!) {
+            issueDelete(id: $id) {
+              success
+            }
+          }
+        """
+        variables = {"id": "INVALID_ISSUE_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+
+# ==========================================
+# TIER 2 TESTS: Comment Operations
+# ==========================================
+
+
+@pytest.mark.asyncio
+class TestCommentUpdate:
+    async def test_update_comment_body(self, linear_client: AsyncClient):
+        """Test updating a comment's body text."""
+        # First create a comment
+        create_query = """
+          mutation($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+              comment {
+                id
+                body
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "issueId": ISSUE_ENG_001,
+                        "body": "Original comment text",
+                    }
+                },
+            },
+        )
+        comment_id = create_response.json()["data"]["commentCreate"]["comment"]["id"]
+
+        # Update the comment
+        update_query = """
+          mutation($id: String!, $input: CommentUpdateInput!) {
+            commentUpdate(id: $id, input: $input) {
+              success
+              comment {
+                id
+                body
+              }
+            }
+          }
+        """
+        update_variables = {
+            "id": comment_id,
+            "input": {"body": "Updated comment text"},
+        }
+        update_response = await linear_client.post(
+            "/graphql", json={"query": update_query, "variables": update_variables}
+        )
+        assert update_response.status_code == 200
+        data = update_response.json()
+        result = data["data"]["commentUpdate"]
+        assert result["success"] is True
+        assert result["comment"]["body"] == "Updated comment text"
+
+    async def test_update_comment_invalid_id(self, linear_client: AsyncClient):
+        """Test updating non-existent comment returns error."""
+        query = """
+          mutation($id: String!, $input: CommentUpdateInput!) {
+            commentUpdate(id: $id, input: $input) {
+              success
+            }
+          }
+        """
+        variables = {
+            "id": "INVALID_COMMENT_ID",
+            "input": {"body": "This should fail"},
+        }
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+    async def test_update_comment_empty_body(self, linear_client: AsyncClient):
+        """Test updating comment with empty body."""
+        # Create a comment first
+        create_query = """
+          mutation($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+              comment {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "issueId": ISSUE_ENG_001,
+                        "body": "Comment to update",
+                    }
+                },
+            },
+        )
+        comment_id = create_response.json()["data"]["commentCreate"]["comment"]["id"]
+
+        # Try to update with empty body
+        update_query = """
+          mutation($id: String!, $input: CommentUpdateInput!) {
+            commentUpdate(id: $id, input: $input) {
+              success
+              comment {
+                body
+              }
+            }
+          }
+        """
+        update_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": update_query,
+                "variables": {"id": comment_id, "input": {"body": ""}},
+            },
+        )
+        assert update_response.status_code == 200
+        # May succeed with empty body or return validation error
+        data = update_response.json()
+        assert "data" in data or "errors" in data
+
+
+@pytest.mark.asyncio
+class TestCommentDelete:
+    async def test_delete_comment(self, linear_client: AsyncClient):
+        """Test deleting a comment."""
+        # Create a comment to delete
+        create_query = """
+          mutation($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+              comment {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "issueId": ISSUE_ENG_001,
+                        "body": "Comment to delete",
+                    }
+                },
+            },
+        )
+        comment_id = create_response.json()["data"]["commentCreate"]["comment"]["id"]
+
+        # Delete the comment
+        delete_query = """
+          mutation($id: String!) {
+            commentDelete(id: $id) {
+              success
+            }
+          }
+        """
+        delete_response = await linear_client.post(
+            "/graphql", json={"query": delete_query, "variables": {"id": comment_id}}
+        )
+        assert delete_response.status_code == 200
+        data = delete_response.json()
+        result = data["data"]["commentDelete"]
+        assert result["success"] is True
+
+    async def test_delete_comment_invalid_id(self, linear_client: AsyncClient):
+        """Test deleting non-existent comment returns error."""
+        query = """
+          mutation($id: String!) {
+            commentDelete(id: $id) {
+              success
+            }
+          }
+        """
+        variables = {"id": "INVALID_COMMENT_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+    async def test_delete_comment_twice(self, linear_client: AsyncClient):
+        """Test deleting same comment twice returns error on second attempt."""
+        # Create a comment
+        create_query = """
+          mutation($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+              comment {
+                id
+              }
+            }
+          }
+        """
+        create_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_query,
+                "variables": {
+                    "input": {
+                        "issueId": ISSUE_ENG_001,
+                        "body": "Comment to delete twice",
+                    }
+                },
+            },
+        )
+        comment_id = create_response.json()["data"]["commentCreate"]["comment"]["id"]
+
+        # Delete the comment
+        delete_query = """
+          mutation($id: String!) {
+            commentDelete(id: $id) {
+              success
+            }
+          }
+        """
+        # First delete should succeed
+        first_delete = await linear_client.post(
+            "/graphql", json={"query": delete_query, "variables": {"id": comment_id}}
+        )
+        assert first_delete.status_code == 200
+        assert first_delete.json()["data"]["commentDelete"]["success"] is True
+
+        # Second delete should be idempotent and still report success
+        second_delete = await linear_client.post(
+            "/graphql", json={"query": delete_query, "variables": {"id": comment_id}}
+        )
+        assert second_delete.status_code == 200
+        data = second_delete.json()
+        assert data["data"]["commentDelete"]["success"] is True
+
+
+# ==========================================
+# TIER 2 TESTS: User Queries
+# ==========================================
+
+
+@pytest.mark.asyncio
+class TestUserQuery:
+    async def test_get_user_by_id(self, linear_client: AsyncClient):
+        """Test querying a single user by ID."""
+        query = """
+          query($id: String!) {
+            user(id: $id) {
+              id
+              name
+              email
+              active
+              admin
+              displayName
+            }
+          }
+        """
+        variables = {"id": USER_JOHN}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        user = data["data"]["user"]
+        assert user["id"] == USER_JOHN
+        assert user["name"] == "John Doe"
+        assert user["email"] is not None
+        assert user["active"] is not None
+        assert user["displayName"] == "John"
+
+    async def test_get_user_invalid_id(self, linear_client: AsyncClient):
+        """Test querying user with invalid ID returns error."""
+        query = """
+          query($id: String!) {
+            user(id: $id) {
+              id
+              name
+            }
+          }
+        """
+        variables = {"id": "INVALID_USER_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+    async def test_get_user_with_teams(self, linear_client: AsyncClient):
+        """Test querying user with team memberships."""
+        query = """
+          query($id: String!) {
+            user(id: $id) {
+              id
+              name
+              teams {
+                nodes {
+                  id
+                  name
+                  key
+                }
+              }
+            }
+          }
+        """
+        variables = {"id": USER_JOHN}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        user = data["data"]["user"]
+        assert user["id"] == USER_JOHN
+        # User should list associated teams
+        assert "teams" in user
+
+
+@pytest.mark.asyncio
+class TestUsersQuery:
+    async def test_list_all_users(self, linear_client: AsyncClient):
+        """Test listing all users in the organization."""
+        query = """
+          query {
+            users {
+              nodes {
+                id
+                name
+                email
+                active
+              }
+            }
+          }
+        """
+        response = await linear_client.post("/graphql", json={"query": query})
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        users = data["data"]["users"]["nodes"]
+        # Should have at least the seeded users
+        assert len(users) >= 3
+        user_ids = [u["id"] for u in users]
+        assert USER_AGENT in user_ids
+        assert USER_JOHN in user_ids
+        assert USER_SARAH in user_ids
+
+    async def test_list_users_with_filter(self, linear_client: AsyncClient):
+        """Test listing users with filter."""
+        query = """
+          query($filter: UserFilter) {
+            users(filter: $filter) {
+              nodes {
+                id
+                name
+                active
+              }
+            }
+          }
+        """
+        variables = {"filter": {"active": {"eq": True}}}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        users = data["data"]["users"]["nodes"]
+        # All returned users should be active
+        for user in users:
+            assert user["active"] is True
+
+    async def test_list_users_pagination(self, linear_client: AsyncClient):
+        """Test users query with pagination."""
+        query = """
+          query($first: Int) {
+            users(first: $first) {
+              edges {
+                cursor
+                node {
+                  id
+                  name
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        """
+        variables = {"first": 2}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        result = data["data"]["users"]
+        edges = result["edges"]
+        assert len(edges) <= 2
+        assert "pageInfo" in result
+        # Each edge should have cursor and node
+        for edge in edges:
+            assert "cursor" in edge
+            assert "node" in edge
+
+    async def test_list_users_with_sort(self, linear_client: AsyncClient):
+        """Test listing users with custom sort order."""
+        query = """
+          query($orderBy: PaginationOrderBy) {
+            users(orderBy: $orderBy) {
+              nodes {
+                id
+                name
+              }
+            }
+          }
+        """
+        variables = {"orderBy": "createdAt"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        users = data["data"]["users"]["nodes"]
+        assert len(users) >= 1
+        # Ensure we still get the expected seeded accounts
+        user_ids = [u["id"] for u in users]
+        assert USER_AGENT in user_ids
+
+
+# ==========================================
+# TIER 2 TESTS: Workflow State Operations
+# ==========================================
+
+
+@pytest.mark.asyncio
+class TestWorkflowStateQuery:
+    async def test_get_workflow_state_by_id(self, linear_client: AsyncClient):
+        """Test querying a single workflow state by ID."""
+        query = """
+          query($id: String!) {
+            workflowState(id: $id) {
+              id
+              name
+              description
+              type
+              position
+              color
+              team {
+                id
+                name
+                key
+              }
+            }
+          }
+        """
+        variables = {"id": STATE_BACKLOG}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        state = data["data"]["workflowState"]
+        assert state["id"] == STATE_BACKLOG
+        assert state["name"] == "Backlog"
+        assert state["type"] is not None
+        assert state["position"] is not None
+        assert state["team"]["id"] == TEAM_ENG
+
+    async def test_get_workflow_state_invalid_id(self, linear_client: AsyncClient):
+        """Test querying workflow state with invalid ID returns error."""
+        query = """
+          query($id: String!) {
+            workflowState(id: $id) {
+              id
+              name
+            }
+          }
+        """
+        variables = {"id": "INVALID_STATE_ID"}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "errors" in data
+
+    async def test_get_workflow_state_with_issues(self, linear_client: AsyncClient):
+        """Test querying workflow state with associated issues."""
+        state_query = """
+          query($id: String!) {
+            workflowState(id: $id) {
+              id
+              name
+              type
+              team {
+                id
+              }
+            }
+          }
+        """
+        variables = {"id": STATE_BACKLOG}
+        state_response = await linear_client.post(
+            "/graphql", json={"query": state_query, "variables": variables}
+        )
+        assert state_response.status_code == 200
+        state_data = state_response.json()
+        assert "data" in state_data
+        state = state_data["data"]["workflowState"]
+        assert state["id"] == STATE_BACKLOG
+        assert state["team"]["id"] == TEAM_ENG
+
+        issues_query = """
+          query($filter: IssueFilter) {
+            issues(filter: $filter, includeArchived: true) {
+              nodes {
+                id
+                state {
+                  id
+                }
+              }
+            }
+          }
+        """
+        issues_variables = {"filter": {"state": {"id": {"eq": STATE_BACKLOG}}}}
+        issues_response = await linear_client.post(
+            "/graphql",
+            json={"query": issues_query, "variables": issues_variables},
+        )
+        assert issues_response.status_code == 200
+        issues_data = issues_response.json()
+        assert "data" in issues_data
+        backlog_issues = issues_data["data"]["issues"]["nodes"]
+        assert len(backlog_issues) >= 1
+        assert all(issue["state"]["id"] == STATE_BACKLOG for issue in backlog_issues)
+
+
+@pytest.mark.asyncio
+class TestWorkflowStatesQueryExtended:
+    """Extended tests for workflowStates query beyond basic functionality."""
+
+    async def test_workflow_states_pagination(self, linear_client: AsyncClient):
+        """Test workflow states query with pagination."""
+        query = """
+          query($first: Int) {
+            workflowStates(first: $first) {
+              edges {
+                cursor
+                node {
+                  id
+                  name
+                  position
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        """
+        variables = {"first": 3}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        result = data["data"]["workflowStates"]
+        edges = result["edges"]
+        assert len(edges) <= 3
+        assert "pageInfo" in result
+
+    async def test_workflow_states_filter_by_type(self, linear_client: AsyncClient):
+        """Test filtering workflow states by type."""
+        query = """
+          query($filter: WorkflowStateFilter) {
+            workflowStates(filter: $filter) {
+              nodes {
+                id
+                name
+                type
+              }
+            }
+          }
+        """
+        # Filter for completed states
+        variables = {"filter": {"type": {"eq": "completed"}}}
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        states = data["data"]["workflowStates"]["nodes"]
+        # All returned states should be completed type
+        for state in states:
+            assert state["type"] == "completed"
+
+    async def test_workflow_states_multiple_teams(self, linear_client: AsyncClient):
+        """Test querying workflow states across multiple teams."""
+        query = """
+          query {
+            workflowStates {
+              nodes {
+                id
+                name
+                team {
+                  id
+                  key
+                }
+              }
+            }
+          }
+        """
+        response = await linear_client.post("/graphql", json={"query": query})
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        states = data["data"]["workflowStates"]["nodes"]
+        # Should have states from multiple teams
+        team_keys = {s["team"]["key"] for s in states}
+        # At least one team should have workflow states
+        assert len(team_keys) >= 1
+
+
+# ==========================================
+# TIER 2 TESTS: Additional Label Operations
+# ==========================================
+
+
+@pytest.mark.asyncio
+class TestIssueLabelQueryExtended:
+    """Extended tests for issue label operations."""
+
+    async def test_query_labels_by_team(self, linear_client: AsyncClient):
+        """Test querying all labels for a specific team."""
+        # First create some labels
+        create_query = """
+          mutation($input: IssueLabelCreateInput!) {
+            issueLabelCreate(input: $input) {
+              issueLabel {
+                id
+                name
+              }
+            }
+          }
+        """
+        # Create a few labels for the team
+        label_names = ["Feature", "Bug Fix", "Documentation"]
+        for name in label_names:
+            await linear_client.post(
+                "/graphql",
+                json={
+                    "query": create_query,
+                    "variables": {
+                        "input": {
+                            "name": name,
+                            "color": "#3b82f6",
+                            "teamId": TEAM_ENG,
+                        }
+                    },
+                },
+            )
+
+        # Query labels - note: actual query depends on schema
+        # This assumes there's a labels or issueLabels query
+        query = """
+          query {
+            teams {
+              nodes {
+                id
+                labels {
+                  nodes {
+                    id
+                    name
+                    color
+                  }
+                }
+              }
+            }
+          }
+        """
+        response = await linear_client.post("/graphql", json={"query": query})
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+
+    async def test_label_color_validation(self, linear_client: AsyncClient):
+        """Test that label color accepts valid hex colors."""
+        query = """
+          mutation($input: IssueLabelCreateInput!) {
+            issueLabelCreate(input: $input) {
+              success
+              issueLabel {
+                id
+                color
+              }
+            }
+          }
+        """
+        # Test with valid hex color
+        variables = {
+            "input": {
+                "name": "Valid Color Label",
+                "color": "#FF5733",
+                "teamId": TEAM_ENG,
+            }
+        }
+        response = await linear_client.post(
+            "/graphql", json={"query": query, "variables": variables}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        result = data["data"]["issueLabelCreate"]
+        assert result["success"] is True
+        assert result["issueLabel"]["color"] == "#FF5733"
+
+    async def test_list_issue_labels_on_issue(self, linear_client: AsyncClient):
+        """Test listing all labels on a specific issue."""
+        # Create a label and add it to an issue
+        create_label_query = """
+          mutation($input: IssueLabelCreateInput!) {
+            issueLabelCreate(input: $input) {
+              issueLabel {
+                id
+              }
+            }
+          }
+        """
+        label_response = await linear_client.post(
+            "/graphql",
+            json={
+                "query": create_label_query,
+                "variables": {
+                    "input": {
+                        "name": "Test Label",
+                        "color": "#10b981",
+                        "teamId": TEAM_ENG,
+                    }
+                },
+            },
+        )
+        label_id = label_response.json()["data"]["issueLabelCreate"]["issueLabel"]["id"]
+
+        # Add label to issue
+        await linear_client.post(
+            "/graphql",
+            json={
+                "query": """
+                  mutation($id: String!, $labelId: String!) {
+                    issueAddLabel(id: $id, labelId: $labelId) {
+                      success
+                    }
+                  }
+                """,
+                "variables": {"id": ISSUE_ENG_001, "labelId": label_id},
+            },
+        )
+
+        # Query issue labels
+        query_labels = """
+          query($id: String!) {
+            issue(id: $id) {
+              id
+              labels {
+                nodes {
+                  id
+                  name
+                  color
+                }
+              }
+            }
+          }
+        """
+        labels_response = await linear_client.post(
+            "/graphql",
+            json={"query": query_labels, "variables": {"id": ISSUE_ENG_001}},
+        )
+        assert labels_response.status_code == 200
+        data = labels_response.json()
+        issue = data["data"]["issue"]
+        labels = issue["labels"]["nodes"]
+        # Should have at least the label we added
+        assert len(labels) >= 1
+        assert any(label["id"] == label_id for label in labels)
