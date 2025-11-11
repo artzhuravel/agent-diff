@@ -372,6 +372,59 @@
       "updatedAt": "2025-01-01T00:00:00"
     }
   ],
+  "issue_labels": [
+    {
+      "id": "6c2b0d3c-3d6d-4d91-9a77-b93b59b8d5a0",
+      "organizationId": "18c8630e-1fd6-4c2e-a032-aa2684c16e46",
+      "teamId": "ad608998-915c-4bad-bcd9-85ebfccccee8",
+      "color": "#EB5757",
+      "createdAt": "2025-01-01T00:00:00",
+      "updatedAt": "2025-01-01T00:00:00",
+      "name": "Urgent",
+      "description": "Work that must be handled immediately",
+      "isGroup": false,
+      "archivedAt": null,
+      "retiredAt": null,
+      "parentId": null,
+      "creatorId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "inheritedFromId": null,
+      "lastAppliedAt": null
+    },
+    {
+      "id": "f9c5b7c8-3909-4f8b-bc25-73e1b56a9c0c",
+      "organizationId": "18c8630e-1fd6-4c2e-a032-aa2684c16e46",
+      "teamId": null,
+      "color": "#56CCF2",
+      "createdAt": "2025-01-01T00:00:00",
+      "updatedAt": "2025-01-01T00:00:00",
+      "name": "UX",
+      "description": "User experience improvements",
+      "isGroup": false,
+      "archivedAt": null,
+      "retiredAt": null,
+      "parentId": null,
+      "creatorId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "inheritedFromId": null,
+      "lastAppliedAt": null
+    },
+    {
+      "id": "8f01ce9d-1433-4c4c-969d-21ca3bf2718f",
+      "organizationId": "18c8630e-1fd6-4c2e-a032-aa2684c16e46",
+      "teamId": "ad608998-915c-4bad-bcd9-85ebfccccee8",
+      "color": "#9B51E0",
+      "createdAt": "2025-01-01T00:00:00",
+      "updatedAt": "2025-01-01T00:00:00",
+      "name": "RL",
+      "description": "Reinforcement learning",
+      "isGroup": false,
+      "archivedAt": null,
+      "retiredAt": null,
+      "parentId": null,
+      "creatorId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "inheritedFromId": null,
+      "lastAppliedAt": null
+    }
+  ],
   "issues": [
     {
       "id": "c6e168e3-fed4-45d0-b03f-a1c1f89ee7ab",
@@ -396,6 +449,99 @@
       "url": "https://linear.app/test-org/issue/ENG-1",
       "createdAt": "2025-01-01T00:00:00",
       "updatedAt": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "5c62f29d-0f6a-4c4d-9d25-52293e2a8d4f",
+      "identifier": "ENG-2",
+      "title": "Polish onboarding dashboard UX",
+      "description": "Tighten spacing, improve empty states, and align typography on the onboarding dashboard to reduce user confusion.",
+      "teamId": "ad608998-915c-4bad-bcd9-85ebfccccee8",
+      "stateId": "741f29ae-cfb3-4b8a-a1f8-c5161c842366",
+      "assigneeId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "creatorId": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
+      "priority": 3.0,
+      "priorityLabel": "Normal",
+      "prioritySortOrder": 1.0,
+      "number": 2.0,
+      "boardOrder": 1.0,
+      "sortOrder": 1.0,
+      "customerTicketCount": 0,
+      "branchName": "eng-2-polish-onboarding-dashboard-ux",
+      "labelIds": [
+        "f9c5b7c8-3909-4f8b-bc25-73e1b56a9c0c"
+      ],
+      "previousIdentifiers": [],
+      "reactionData": {},
+      "url": "https://linear.app/test-org/issue/ENG-2",
+      "createdAt": "2025-01-01T00:00:00",
+      "updatedAt": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "87c1d2f3-66c4-4dd0-bc93-1b99d04dc374",
+      "identifier": "ENG-3",
+      "title": "Respond to overnight production incident",
+      "description": "Service experienced elevated 500s between 02:00 and 03:00 UTC. Collect logs, draft a customer update, and prepare follow-up RCA tasks.",
+      "teamId": "ad608998-915c-4bad-bcd9-85ebfccccee8",
+      "stateId": "6963a682-5967-477a-9afc-0b8a5b70b070",
+      "assigneeId": "2dcc8dc2-ca19-475d-9882-3ba5e911e7ec",
+      "creatorId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "priority": 1.0,
+      "priorityLabel": "Urgent",
+      "prioritySortOrder": -1.0,
+      "number": 3.0,
+      "boardOrder": 2.0,
+      "sortOrder": 2.0,
+      "customerTicketCount": 4,
+      "branchName": "eng-3-production-incident-response",
+      "labelIds": [
+        "6c2b0d3c-3d6d-4d91-9a77-b93b59b8d5a0"
+      ],
+      "previousIdentifiers": [],
+      "reactionData": {},
+      "url": "https://linear.app/test-org/issue/ENG-3",
+      "createdAt": "2025-01-01T06:00:00",
+      "updatedAt": "2025-01-01T06:00:00"
+    },
+    {
+      "id": "b4f5130f-5c1b-4bc0-a8f6-60a22b0adf5e",
+      "identifier": "ENG-4",
+      "title": "Prototype reinforcement learning evaluation harness",
+      "description": "Build a small harness to replay historical agent interactions and compare rule-based policies against the new RL policy.",
+      "teamId": "ad608998-915c-4bad-bcd9-85ebfccccee8",
+      "stateId": "741f29ae-cfb3-4b8a-a1f8-c5161c842366",
+      "assigneeId": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
+      "creatorId": "03b0809e-713e-44ee-95de-b7a198b135ac",
+      "priority": 2.0,
+      "priorityLabel": "High",
+      "prioritySortOrder": 0.5,
+      "number": 4.0,
+      "boardOrder": 3.0,
+      "sortOrder": 3.0,
+      "customerTicketCount": 0,
+      "branchName": "eng-4-rl-evaluation-harness",
+      "labelIds": [
+        "8f01ce9d-1433-4c4c-969d-21ca3bf2718f"
+      ],
+      "previousIdentifiers": [],
+      "reactionData": {},
+      "url": "https://linear.app/test-org/issue/ENG-4",
+      "createdAt": "2025-01-02T09:00:00",
+      "updatedAt": "2025-01-02T09:00:00"
+    }
+  ],
+  "comments": [
+    {
+      "id": "e10f59c3-7a49-4d52-8dba-8c8602f8c807",
+      "issueId": "c6e168e3-fed4-45d0-b03f-a1c1f89ee7ab",
+      "userId": "2dcc8dc2-ca19-475d-9882-3ba5e911e7ec",
+      "body": "This is a seeded comment on ENG-1",
+      "bodyData": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"This is a seeded comment on ENG-1\"}]}]}",
+      "reactionData": {},
+      "editedAt": null,
+      "archivedAt": null,
+      "createdAt": "2025-01-01T00:00:00",
+      "updatedAt": "2025-01-01T00:00:00",
+      "url": "https://linear.app/test-org/issue/ENG-1#comments"
     }
   ]
 }
