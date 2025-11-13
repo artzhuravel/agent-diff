@@ -148,8 +148,85 @@ def resolve_issue_labels(
 
     # Apply custom filter if provided
     if filter:
-        # TODO: Implement IssueLabelFilter logic (name, team, etc.)
-        pass
+
+        def match_string(value, comp):
+            if value is None:
+                value = ""
+            s = str(value)
+            for k, v in comp.items():
+                if k == "eq" and s != v:
+                    return False
+                if k == "eqIgnoreCase" and s.lower() != str(v).lower():
+                    return False
+                if k == "neq" and s == v:
+                    return False
+                if k == "neqIgnoreCase" and s.lower() == str(v).lower():
+                    return False
+                if k == "contains" and str(v) not in s:
+                    return False
+                if k == "containsIgnoreCase" and str(v).lower() not in s.lower():
+                    return False
+                if k == "notContains" and str(v) in s:
+                    return False
+                if k == "notContainsIgnoreCase" and str(v).lower() in s.lower():
+                    return False
+                if k == "startsWith" and not s.startswith(str(v)):
+                    return False
+                if k == "startsWithIgnoreCase" and not s.lower().startswith(
+                    str(v).lower()
+                ):
+                    return False
+                if k == "endsWith" and not s.endswith(str(v)):
+                    return False
+                if k == "endsWithIgnoreCase" and not s.lower().endswith(str(v).lower()):
+                    return False
+                if k == "in" and s not in v:
+                    return False
+                if k == "nin" and s in v:
+                    return False
+            return True
+
+        def match_id(value, comp):
+            vid = value
+            for k, v in comp.items():
+                if k == "eq" and vid != v:
+                    return False
+                if k == "neq" and vid == v:
+                    return False
+                if k == "in" and vid not in v:
+                    return False
+                if k == "nin" and vid in v:
+                    return False
+            return True
+
+        flt = filter or {}
+        # id
+        if "id" in flt and isinstance(flt["id"], dict):
+            labels = [lbl for lbl in labels if match_id(lbl.id, flt["id"])]
+        # name
+        if "name" in flt and isinstance(flt["name"], dict):
+            labels = [lbl for lbl in labels if match_string(lbl.name, flt["name"])]
+        # team
+        if "team" in flt and isinstance(flt["team"], dict):
+            tf = flt["team"]
+            if "null" in tf:
+                want_null = bool(tf["null"])
+                labels = [lbl for lbl in labels if (lbl.teamId is None) == want_null]
+            if "id" in tf and isinstance(tf["id"], dict):
+                labels = [lbl for lbl in labels if match_id(lbl.teamId, tf["id"])]
+            if "key" in tf and isinstance(tf["key"], dict):
+
+                def get_team_key(lbl):
+                    try:
+                        return (
+                            lbl.team.key if hasattr(lbl, "team") and lbl.team else None
+                        )
+                    except Exception:
+                        return None
+
+                labels = [
+                    lbl for lbl in labels if match_string(get_team_key(lbl), tf["key"])
+                ]
 
     # Sort by orderBy field
     if orderBy == "updatedAt":
@@ -695,19 +772,15 @@ def resolve_issue(obj, info, **kwargs):
         return issue
 
     if identifier:
-        # Parse identifier: TEAMKEY-NUMBER
-        import re
-
-        m = re.match(r"^([A-Za-z]+)-(\\d+)$", identifier.strip())
-        if not m:
+        # Parse identifier: TEAMKEY-NUMBER without relying on regex escaping pitfalls
+        ident = identifier.strip()
+        parts = ident.split("-")
+        if len(parts) != 2 or not parts[0].isalpha() or not parts[1].isdigit():
             raise Exception(
                 "Invalid identifier format. Expected 'KEY-NUMBER', e.g., 'ENG-2'."
             )
-        team_key = m.group(1).upper()
-        try:
-            number = int(m.group(2))
-        except ValueError:
-            raise Exception("Invalid identifier number segment.")
+        team_key = parts[0].upper()
+        number = int(parts[1])
 
         issue = (
             session.query(Issue)
