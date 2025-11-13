@@ -24,8 +24,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: "postgresql+psycopg2://postgres:postgres@postgres:5432/diff_the_universe"
-      SECRET_KEY: "${SECRET_KEY:-change-in-production}"
-      ENV: "development"
+      ENVIRONMENT: "development"
       CLEANUP_INTERVAL_SECONDS: "${CLEANUP_INTERVAL_SECONDS:-30}"
     depends_on:
       postgres:
