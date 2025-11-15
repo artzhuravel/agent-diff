@@ -10661,6 +10661,15 @@ def resolve_issueUpdate(obj, info, **kwargs):
     issue_id = kwargs.get("id")
     input_data = kwargs.get("input", {})
 
+    def validate_uuid(value: str, field_name: str) -> None:
+        """Validate that a value is a valid UUID (matching Linear's validation)."""
+        try:
+            uuid.UUID(value)
+        except (ValueError, AttributeError):
+            raise Exception(
+                f"Argument Validation Error: each value in {field_name} must be a UUID"
+            )
+
     try:
         # Validate required parameters
         if not issue_id:
@@ -10672,31 +10681,35 @@ def resolve_issueUpdate(obj, info, **kwargs):
         now = datetime.now(timezone.utc)
 
         # Handle label updates (addedLabelIds and removedLabelIds)
+        # NOTE: labelIds (direct replacement) takes precedence if provided
         if "addedLabelIds" in input_data:
             added_label_ids = input_data["addedLabelIds"]
-            current_labels = issue.labelIds if issue.labelIds else []
-            # Add new labels that aren't already present
-            for label_id in added_label_ids:
-                if label_id not in current_labels:
-                    current_labels.append(label_id)
-            issue.labelIds = current_labels
 
-            # Sync the relationship
-            if added_label_ids:
+            # Validate UUID format first (matching Linear's validation)
+            for label_id in added_label_ids:
+                validate_uuid(label_id, "addedLabelIds")
+
+            # Determine which labels are actually new
+            current_labels = issue.labelIds or []
+            to_add = [lid for lid in added_label_ids if lid not in current_labels]
+
+            # Validate existence BEFORE mutating
+            if to_add:
                 labels_to_add = (
-                    session.query(IssueLabel)
-                    .filter(IssueLabel.id.in_(added_label_ids))
-                    .all()
+                    session.query(IssueLabel).filter(IssueLabel.id.in_(to_add)).all()
                 )
                 found_ids = {label.id for label in labels_to_add}
-                missing_ids = set(added_label_ids) - found_ids
+                missing_ids = set(to_add) - found_ids
                 if missing_ids:
-                    raise Exception(f"Label(s) not found: {', '.join(missing_ids)}")
+                    raise Exception("Received non-uuid id")
 
-                # Add to the relationship (avoiding duplicates)
-                current_label_objects = set(issue.labels)
+                # Mutate only after validation succeeds
+                issue.labelIds = current_labels + to_add
+
+                # Compare by ID to avoid duplicates (not instance equality)
+                existing_ids = {label.id for label in (issue.labels or [])}
                 for label in labels_to_add:
-                    if label not in current_label_objects:
+                    if label.id not in existing_ids:
                         issue.labels.append(label)
 
         if "removedLabelIds" in input_data:
@@ -10715,28 +10728,35 @@ def resolve_issueUpdate(obj, info, **kwargs):
                 ]
 
         # Handle labelIds (direct replacement)
+        # NOTE: This takes precedence over addedLabelIds/removedLabelIds
         if "labelIds" in input_data:
             label_ids = input_data["labelIds"]
-            issue.labelIds = label_ids
 
-            # CRITICAL: Also sync the many-to-many relationship via issue_label_issue_association
-            # This ensures the join table is properly maintained
+            # Validate UUID format first (matching Linear's validation)
+            for label_id in label_ids:
+                validate_uuid(label_id, "labelIds")
+
+            # CRITICAL: Validate existence BEFORE mutating to avoid inconsistent state
+            # Also sync the many-to-many relationship via issue_label_issue_association
             if label_ids:
                 # Fetch all IssueLabel objects for the given IDs
                 new_labels = (
                     session.query(IssueLabel).filter(IssueLabel.id.in_(label_ids)).all()
                 )
 
-                # Validate that all label IDs exist
+                # Validate that all label IDs exist (matching Linear's behavior)
                 found_ids = {label.id for label in new_labels}
                 missing_ids = set(label_ids) - found_ids
                 if missing_ids:
-                    raise Exception(f"Label(s) not found: {', '.join(missing_ids)}")
+                    raise Exception("Received non-uuid id")
 
+                # Mutate only after validation succeeds
+                issue.labelIds = label_ids
                 # Update the relationship (SQLAlchemy will handle the join table)
                 issue.labels = new_labels
             else:
                 # Clear all labels
+                issue.labelIds = []
                 issue.labels = []
 
         # Handle subscriberIds (direct replacement)
