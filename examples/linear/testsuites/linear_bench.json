@@ -1111,7 +1111,7 @@
       "name": "Issue Decomposition (Hierarchy)",
       "prompt": "Break down the 'SSO' ticket into two sub-issues: 'Frontend Implementation' (assigned to Sarah) and 'Backend API' (assigned to John). Ensure the previous ticket is set as the parent for both.",
       "type": "actionEval",
-      "seed_template": "linear_default",
+      "seed_template": "linear_expanded",
       "impersonate_user_id": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
       "assertions": [
         {
@@ -1147,7 +1147,7 @@
       "name": "Dependency Chain Creation",
       "prompt": "Create three new issues in Engineering: 'Alpha', 'Beta', and 'Gamma'. Configure them as a dependency chain where Alpha blocks Beta, and Beta blocks Gamma.",
       "type": "actionEval",
-      "seed_template": "linear_default",
+      "seed_template": "linear_expanded",
       "impersonate_user_id": "2790a7ee-fde0-4537-9588-e233aa5a68d1",
       "assertions": [
         {
