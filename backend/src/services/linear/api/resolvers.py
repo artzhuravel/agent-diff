@@ -235,14 +235,21 @@ def resolve_issue_labels(
     else:  # Default to createdAt
         labels = sorted(labels, key=lambda l: l.createdAt)
 
-    # Apply pagination (simplified - full cursor-based pagination would be more complex)
-    if first and first < len(labels):
-        labels = labels[:first]
-    elif last and last < len(labels):
-        labels = labels[-last:]
+    # Apply proper pagination with edges and pageInfo
+    # Note: This is in-memory pagination since we already loaded the labels from the relationship
+    # For cursor-based pagination, we limit to first+1 or last+1 to detect hasNextPage/hasPreviousPage
+    limit = first if first else (last if last else 50)
 
-    # Return in IssueLabelConnection format
-    return {"nodes": labels}
+    # Slice the list based on pagination
+    if last:
+        # For backward pagination, take from the end
+        items = labels[-limit - 1 :] if len(labels) > limit else labels
+    else:
+        # For forward pagination, take from the start
+        items = labels[: limit + 1] if len(labels) > limit else labels
+
+    # Use the centralized pagination helper to build proper Connection
+    return apply_pagination(items, after, before, first, last, orderBy)
 
 
 @issue_type.field("comments")
@@ -787,6 +794,271 @@ def resolve_user_teams(
         base_query = base_query.order_by(order_column.desc(), Team.id.desc())
     else:
         base_query = base_query.order_by(order_column.asc(), Team.id.asc())
+
+    # Determine limit
+    limit = first if first else (last if last else 50)
+
+    # Fetch limit + 1 to detect if there are more pages
+    items = base_query.limit(limit + 1).all()
+
+    # Use the centralized pagination helper
+    return apply_pagination(items, after, before, first, last, order_field)
+
+
+@user_type.field("assignedIssues")
+def resolve_user_assigned_issues(
+    user,
+    info,
+    after=None,
+    before=None,
+    filter=None,
+    first=None,
+    includeArchived=False,
+    last=None,
+    orderBy="createdAt",
+):
+    """
+    Resolve the assignedIssues field to return an IssueConnection for issues assigned to this user.
+
+    Args:
+        user: The parent User object
+        info: GraphQL resolve info
+        after: Cursor for forward pagination
+        before: Cursor for backward pagination
+        filter: IssueFilter to filter results
+        first: Number of items for forward pagination (default: 50)
+        includeArchived: Include archived issues (default: False)
+        last: Number of items for backward pagination
+        orderBy: Order by field - "createdAt" or "updatedAt" (default: "createdAt")
+
+    Returns:
+        IssueConnection with nodes, edges, and pageInfo
+    """
+    session: Session = info.context["session"]
+
+    # Build base query for issues assigned to this user
+    base_query = session.query(Issue).filter(Issue.assigneeId == user.id)
+
+    # Filter archived issues unless includeArchived is True
+    if not includeArchived:
+        base_query = base_query.filter(Issue.archivedAt.is_(None))
+
+    # Apply custom filter if provided
+    if filter:
+        validate_issue_filter(filter)
+        base_query = apply_issue_filter(base_query, filter)
+
+    # Determine order field
+    order_field = orderBy if orderBy in ["createdAt", "updatedAt"] else "createdAt"
+
+    # Apply cursor-based pagination
+    if after:
+        cursor_data = decode_cursor(after)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        # Parse datetime if needed
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        # Apply cursor filter for forward pagination
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column > cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id > cursor_id),
+            )
+        )
+
+    if before:
+        cursor_data = decode_cursor(before)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        # Parse datetime if needed
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        # Apply cursor filter for backward pagination
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column < cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id < cursor_id),
+            )
+        )
+
+    # Apply ordering
+    order_column = getattr(Issue, order_field)
+    if last or before:
+        # For backward pagination, reverse the order
+        base_query = base_query.order_by(order_column.desc(), Issue.id.desc())
+    else:
+        base_query = base_query.order_by(order_column.asc(), Issue.id.asc())
+
+    # Determine limit
+    limit = first if first else (last if last else 50)
+
+    # Fetch limit + 1 to detect if there are more pages
+    items = base_query.limit(limit + 1).all()
+
+    # Use the centralized pagination helper
+    return apply_pagination(items, after, before, first, last, order_field)
+
+
+@user_type.field("createdIssues")
+def resolve_user_created_issues(
+    user,
+    info,
+    after=None,
+    before=None,
+    filter=None,
+    first=None,
+    includeArchived=False,
+    last=None,
+    orderBy="createdAt",
+):
+    """
+    Resolve the createdIssues field to return an IssueConnection for issues created by this user.
+    """
+    session: Session = info.context["session"]
+
+    # Build base query for issues created by this user
+    base_query = session.query(Issue).filter(Issue.creatorId == user.id)
+
+    # Filter archived issues unless includeArchived is True
+    if not includeArchived:
+        base_query = base_query.filter(Issue.archivedAt.is_(None))
+
+    # Apply custom filter if provided
+    if filter:
+        validate_issue_filter(filter)
+        base_query = apply_issue_filter(base_query, filter)
+
+    # Determine order field
+    order_field = orderBy if orderBy in ["createdAt", "updatedAt"] else "createdAt"
+
+    # Apply cursor-based pagination
+    if after:
+        cursor_data = decode_cursor(after)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column > cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id > cursor_id),
+            )
+        )
+
+    if before:
+        cursor_data = decode_cursor(before)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column < cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id < cursor_id),
+            )
+        )
+
+    # Apply ordering
+    order_column = getattr(Issue, order_field)
+    if last or before:
+        base_query = base_query.order_by(order_column.desc(), Issue.id.desc())
+    else:
+        base_query = base_query.order_by(order_column.asc(), Issue.id.asc())
+
+    # Determine limit
+    limit = first if first else (last if last else 50)
+
+    # Fetch limit + 1 to detect if there are more pages
+    items = base_query.limit(limit + 1).all()
+
+    # Use the centralized pagination helper
+    return apply_pagination(items, after, before, first, last, order_field)
+
+
+@user_type.field("delegatedIssues")
+def resolve_user_delegated_issues(
+    user,
+    info,
+    after=None,
+    before=None,
+    filter=None,
+    first=None,
+    includeArchived=False,
+    last=None,
+    orderBy="createdAt",
+):
+    """
+    Resolve the delegatedIssues field to return an IssueConnection for issues delegated to this user.
+    """
+    session: Session = info.context["session"]
+
+    # Build base query for issues delegated to this user
+    base_query = session.query(Issue).filter(Issue.delegateId == user.id)
+
+    # Filter archived issues unless includeArchived is True
+    if not includeArchived:
+        base_query = base_query.filter(Issue.archivedAt.is_(None))
+
+    # Apply custom filter if provided
+    if filter:
+        validate_issue_filter(filter)
+        base_query = apply_issue_filter(base_query, filter)
+
+    # Determine order field
+    order_field = orderBy if orderBy in ["createdAt", "updatedAt"] else "createdAt"
+
+    # Apply cursor-based pagination
+    if after:
+        cursor_data = decode_cursor(after)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column > cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id > cursor_id),
+            )
+        )
+
+    if before:
+        cursor_data = decode_cursor(before)
+        cursor_field_value = cursor_data["field"]
+        cursor_id = cursor_data["id"]
+
+        if order_field in ["createdAt", "updatedAt"]:
+            cursor_field_value = datetime.fromisoformat(cursor_field_value)
+
+        order_column = getattr(Issue, order_field)
+        base_query = base_query.filter(
+            or_(
+                order_column < cursor_field_value,
+                and_(order_column == cursor_field_value, Issue.id < cursor_id),
+            )
+        )
+
+    # Apply ordering
+    order_column = getattr(Issue, order_field)
+    if last or before:
+        base_query = base_query.order_by(order_column.desc(), Issue.id.desc())
+    else:
+        base_query = base_query.order_by(order_column.asc(), Issue.id.asc())
 
     # Determine limit
     limit = first if first else (last if last else 50)
@@ -11092,6 +11364,24 @@ def resolve_issueCreate(obj, info, **kwargs):
                 session.add(issue)
                 session.flush()
                 session.refresh(issue)
+
+                # Sync label relationship so the join table matches labelIds,
+                # mirroring Linear's behavior for issueCreate.
+                if label_ids:
+                    new_labels = (
+                        session.query(IssueLabel)
+                        .filter(IssueLabel.id.in_(label_ids))
+                        .all()
+                    )
+                    found_ids = {label.id for label in new_labels}
+                    missing_ids = set(label_ids) - found_ids
+                    if missing_ids:
+                        missing_list = ", ".join(sorted(missing_ids))
+                        raise Exception(f"Label(s) not found: {missing_list}")
+                    # Assign relationship; SQLAlchemy will manage the join table.
+                    issue.labels = new_labels
+                else:
+                    issue.labels = []
                 break
             except OperationalError as oe:
                 if "deadlock detected" in str(oe).lower() and attempt < max_retries - 1:
@@ -11319,8 +11609,23 @@ def resolve_issueBatchCreate(obj, info, **kwargs):
 
             # Add to session
             session.add(issue)
-            created_issues.append(issue)
             session.flush()
+
+            # Sync label relationship so the join table matches labelIds
+            if label_ids:
+                new_labels = (
+                    session.query(IssueLabel).filter(IssueLabel.id.in_(label_ids)).all()
+                )
+                found_ids = {label.id for label in new_labels}
+                missing_ids = set(label_ids) - found_ids
+                if missing_ids:
+                    missing_list = ", ".join(sorted(missing_ids))
+                    raise Exception(f"Label(s) not found: {missing_list}")
+                issue.labels = new_labels
+            else:
+                issue.labels = []
+
+            created_issues.append(issue)
 
             # Hydrate relationships for GraphQL response
             issue.team = team
