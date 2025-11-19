@@ -252,6 +252,80 @@ def resolve_issue_labels(
     return apply_pagination(items, after, before, first, last, orderBy)
 
 
+@issue_type.field("relations")
+def resolve_issue_relations(
+    issue,
+    info,
+    after=None,
+    before=None,
+    first=50,
+    includeArchived=False,
+    last=None,
+    orderBy="createdAt",
+):
+    """
+    Resolve the relations field to return an IssueRelationConnection.
+
+    Args:
+        issue: The parent Issue object
+        info: GraphQL resolve info
+        after: Cursor for forward pagination
+        before: Cursor for backward pagination
+        first: Number of items for forward pagination (default: 50)
+        includeArchived: Include archived relations (default: False)
+        last: Number of items for backward pagination
+        orderBy: Order by field - "createdAt" or "updatedAt" (default: "createdAt")
+
+    Returns:
+        IssueRelationConnection with nodes, edges, and pageInfo
+    """
+    try:
+        # Get relations from the relationship
+        relations = (
+            issue.relations
+            if hasattr(issue, "relations") and issue.relations is not None
+            else []
+        )
+
+        # Filter archived relations unless includeArchived is True
+        if not includeArchived:
+            relations = [rel for rel in relations if not rel.archivedAt]
+
+        # Sort by orderBy field
+        if orderBy == "updatedAt":
+            relations = sorted(relations, key=lambda r: r.updatedAt or r.createdAt)
+        else:  # Default to createdAt
+            relations = sorted(relations, key=lambda r: r.createdAt)
+
+        # Apply pagination
+        limit = first if first else (last if last else 50)
+
+        # Slice the list based on pagination
+        if last:
+            items = relations[-limit - 1 :] if len(relations) > limit else relations
+        else:
+            items = relations[: limit + 1] if len(relations) > limit else relations
+
+        # Use the centralized pagination helper to build proper Connection
+        return apply_pagination(items, after, before, first, last, orderBy)
+    except Exception as e:
+        # Log error but return empty connection to avoid GraphQL null violation
+        import traceback
+
+        print(f"ERROR in resolve_issue_relations for issue {issue.id}: {e}")
+        traceback.print_exc()
+        return {
+            "edges": [],
+            "nodes": [],
+            "pageInfo": {
+                "hasNextPage": False,
+                "hasPreviousPage": False,
+                "startCursor": None,
+                "endCursor": None,
+            },
+        }
+
+
 @issue_type.field("comments")
 def resolve_issue_comments(
     issue,
