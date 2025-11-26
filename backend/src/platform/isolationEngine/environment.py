@@ -64,16 +64,23 @@ class EnvironmentHandler:
         """Set REPLICA IDENTITY FULL for all tables in schema to enable logical replication."""
         with self.session_manager.base_engine.begin() as conn:
             tables = self._list_tables(conn, schema)
+            if not tables:
+                logger.warning(
+                    f"No tables found in schema {schema} to set REPLICA IDENTITY"
+                )
+                return
             for table in tables:
                 try:
                     conn.execute(
                         text(f'ALTER TABLE "{schema}"."{table}" REPLICA IDENTITY FULL')
                     )
-                    logger.debug(f"Set REPLICA IDENTITY FULL for {schema}.{table}")
                 except Exception as e:
                     logger.warning(
                         f"Failed to set replica identity for {schema}.{table}: {e}"
                     )
+            logger.info(
+                f"Set REPLICA IDENTITY FULL for {len(tables)} tables in {schema}"
+            )
 
     def _reset_sequences(self, conn, schema: str, tables: Iterable[str]) -> None:
         for tbl in tables:

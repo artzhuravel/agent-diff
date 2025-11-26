@@ -36,8 +36,8 @@ class PoolRefillService:
         environment_handler: EnvironmentHandler,
         pool_manager: PoolManager,
         targets: Mapping[str, int],
-        interval_seconds: int = 60,
-        max_concurrent_builds: int = 3,
+        interval_seconds: int = 30,
+        max_concurrent_builds: int = 5,
     ):
         self.session_manager = session_manager
         self.environment_handler = environment_handler
@@ -165,15 +165,15 @@ class PoolRefillService:
         table_order: list[str] | None,
         template_id,
         schema_name: str | None,
+        _retry: int = 0,
     ) -> None:
         name = schema_name or f"state_pool_{uuid4().hex}"
+        max_retries = 2
 
         try:
-            try:
-                self.environment_handler.create_schema(name)
-            except Exception:
+            if self.environment_handler.schema_exists(name):
                 self.environment_handler.drop_schema(name)
-                self.environment_handler.create_schema(name)
+            self.environment_handler.create_schema(name)
 
             self.environment_handler.migrate_schema(template_schema, name)
             self.environment_handler.seed_data_from_template(
@@ -194,6 +194,21 @@ class PoolRefillService:
                 entry.id,
             )
         except Exception as exc:
+            # Retry on connection errors (Neon drops connections)
+            is_connection_error = "SSL SYSCALL" in str(exc) or "EOF detected" in str(
+                exc
+            )
+            if is_connection_error and _retry < max_retries:
+                logger.warning(
+                    f"Connection dropped during pool build, retrying ({_retry + 1}/{max_retries})"
+                )
+                try:
+                    self.environment_handler.drop_schema(name)
+                except Exception:
+                    pass
+                return self._build_pool_entry(
+                    template_schema, table_order, template_id, schema_name, _retry + 1
+                )
             logger.error(
                 "Failed to build pooled schema for %s (%s): %s",
                 template_schema,

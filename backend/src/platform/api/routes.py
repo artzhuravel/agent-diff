@@ -381,6 +381,7 @@ async def get_test_suite(request: Request) -> JSONResponse:
 
 
 async def init_environment(request: Request) -> JSONResponse:
+    t0 = time.perf_counter()
     try:
         body = await parse_request_body(request, InitEnvRequestBody)
     except ValueError as e:
@@ -410,6 +411,8 @@ async def init_environment(request: Request) -> JSONResponse:
         )
 
     core: CoreIsolationEngine = request.app.state.coreIsolationEngine
+    t1 = time.perf_counter()
+    logger.debug(f"init_environment setup took {t1 - t0:.2f}s")
 
     try:
         result = core.create_environment(
@@ -422,6 +425,11 @@ async def init_environment(request: Request) -> JSONResponse:
     except ValueError as e:
         logger.warning(f"Environment creation failed: {e}")
         return bad_request(str(e))
+
+    t2 = time.perf_counter()
+    logger.info(
+        f"init_environment create_environment took {t2 - t1:.2f}s (total {t2 - t0:.2f}s)"
+    )
 
     service = selected_template_service
     env_url = f"/api/env/{result.environment_id}/services/{service}"
@@ -513,6 +521,7 @@ async def create_tests_in_suite(request: Request) -> JSONResponse:
 
 
 async def start_run(request: Request) -> JSONResponse:
+    t0 = time.perf_counter()
     try:
         body = await parse_request_body(request, StartRunRequest)
     except ValueError as e:
@@ -572,6 +581,7 @@ async def start_run(request: Request) -> JSONResponse:
 
     session.commit()
 
+    t1 = time.perf_counter()
     replication_service = getattr(request.app.state, "replication_service", None)
     if replication_service:
         try:
@@ -584,6 +594,10 @@ async def start_run(request: Request) -> JSONResponse:
             run.replication_plugin = replication_service.plugin
             run.replication_started_at = datetime.now()
             session.commit()
+            t2 = time.perf_counter()
+            logger.info(
+                f"start_run replication setup took {t2 - t1:.2f}s (total {t2 - t0:.2f}s)"
+            )
         except Exception as exc:
             logger.warning(
                 "Failed to start replication for run %s: %s", run.id, exc, exc_info=True
@@ -648,7 +662,7 @@ async def evaluate_run(request: Request) -> JSONResponse:
             replication_service.stop_stream(
                 environment_id=run.environment_id,
                 run_id=run.id,
-                drop_slot=True,
+                target_schema=rte.schema,
             )
         except Exception as exc:
             logger.warning(

@@ -44,6 +44,9 @@ class CoreIsolationEngine:
         table_order = template_meta.table_order if template_meta else None
         template_uuid = str(template_meta.id) if template_meta else None
 
+        import time
+
+        t0 = time.perf_counter()
         pool_entry = self.pool_manager.claim_ready_schema(
             template_schema=template_schema, requested_by=created_by
         )
@@ -54,20 +57,32 @@ class CoreIsolationEngine:
             environment_schema = pool_entry.schema_name
             if pool_entry.template_id and template_uuid is None:
                 template_uuid = str(pool_entry.template_id)
+            logger.info(f"Claimed pooled schema in {time.perf_counter() - t0:.2f}s")
         else:
             environment_schema = f"state_{environment_id}"
+            logger.warning(f"Pool miss for {template_schema}, building from scratch...")
 
+            t1 = time.perf_counter()
             self.environment_handler.create_schema(environment_schema)
+            logger.info(f"create_schema took {time.perf_counter() - t1:.2f}s")
+
+            t2 = time.perf_counter()
             self.environment_handler.migrate_schema(template_schema, environment_schema)
+            logger.info(f"migrate_schema took {time.perf_counter() - t2:.2f}s")
+
+            t3 = time.perf_counter()
             self.environment_handler.seed_data_from_template(
                 template_schema, environment_schema, tables_order=table_order
             )
+            logger.info(f"seed_data took {time.perf_counter() - t3:.2f}s")
+
             self.pool_manager.register_entry(
                 schema_name=environment_schema,
                 template_schema=template_schema,
                 template_id=template_meta.id if template_meta else None,
                 status="in_use",
             )
+            logger.info(f"Total non-pooled build: {time.perf_counter() - t0:.2f}s")
 
         expires_at = datetime.now() + timedelta(seconds=ttl_seconds)
         self.environment_handler.set_runtime_environment(

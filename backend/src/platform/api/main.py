@@ -51,34 +51,7 @@ def create_app():
     coreTestManager = CoreTestManager()
     templateManager = TemplateManager()
 
-    cleanup_interval = int(environ.get("CLEANUP_INTERVAL_SECONDS", 15))
-
-    cleanup_service = create_cleanup_service(
-        session_manager=sessions,
-        environment_handler=environment_handler,
-        interval_seconds=cleanup_interval,
-        pool_manager=pool_manager,
-    )
-
-    raw_targets = environ.get("ENVIRONMENT_POOL_TARGETS")
-    if raw_targets:
-        pool_targets = parse_pool_targets(raw_targets)
-    else:
-        with sessions.with_meta_session() as session:
-            templates = session.query(TemplateEnvironment.location).all()
-            pool_targets = {location: 5 for (location,) in templates}
-    pool_refill_interval = int(environ.get("POOL_REFILL_INTERVAL_SECONDS", 15))
-    pool_refill_concurrency = int(environ.get("POOL_REFILL_CONCURRENCY", 3))
-    pool_refill_service = PoolRefillService(
-        session_manager=sessions,
-        environment_handler=environment_handler,
-        pool_manager=pool_manager,
-        targets=pool_targets,
-        interval_seconds=pool_refill_interval,
-        max_concurrent_builds=pool_refill_concurrency,
-    )
-
-    app.state.coreIsolationEngine = coreIsolationEngine
+    # Create replication service first (needed by cleanup)
     replication_enabled = (
         environ.get("LOGICAL_REPLICATION_ENABLED", "false").lower() == "true"
     )
@@ -89,6 +62,35 @@ def create_app():
             session_manager=sessions,
             config=replication_config,
         )
+
+    cleanup_interval = int(environ.get("CLEANUP_INTERVAL_SECONDS", 15))
+    cleanup_service = create_cleanup_service(
+        session_manager=sessions,
+        environment_handler=environment_handler,
+        interval_seconds=cleanup_interval,
+        pool_manager=pool_manager,
+        replication_service=replication_service,
+    )
+
+    raw_targets = environ.get("ENVIRONMENT_POOL_TARGETS")
+    if raw_targets:
+        pool_targets = parse_pool_targets(raw_targets)
+    else:
+        with sessions.with_meta_session() as session:
+            templates = session.query(TemplateEnvironment.location).all()
+            pool_targets = {location: 10 for (location,) in templates}
+    pool_refill_interval = int(environ.get("POOL_REFILL_INTERVAL_SECONDS", 15))
+    pool_refill_concurrency = int(environ.get("POOL_REFILL_CONCURRENCY", 5))
+    pool_refill_service = PoolRefillService(
+        session_manager=sessions,
+        environment_handler=environment_handler,
+        pool_manager=pool_manager,
+        targets=pool_targets,
+        interval_seconds=pool_refill_interval,
+        max_concurrent_builds=pool_refill_concurrency,
+    )
+
+    app.state.coreIsolationEngine = coreIsolationEngine
 
     app.state.coreEvaluationEngine = coreEvaluationEngine
     app.state.coreTestManager = coreTestManager
@@ -133,12 +135,18 @@ def create_app():
         await app.state.cleanup_service.start()
         if app.state.pool_refill_service.has_targets():
             await app.state.pool_refill_service.start()
+        # Start global replication service (creates slot once)
+        if app.state.replication_service:
+            app.state.replication_service.start()
 
     @app.on_event("shutdown")
     async def shutdown_event():
         await app.state.cleanup_service.stop()
         if app.state.pool_refill_service.has_targets():
             await app.state.pool_refill_service.stop()
+        # Stop global replication service
+        if app.state.replication_service:
+            app.state.replication_service.stop()
 
     return app
 
