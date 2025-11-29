@@ -381,6 +381,10 @@ async def get_test_suite(request: Request) -> JSONResponse:
 
 
 async def init_environment(request: Request) -> JSONResponse:
+    maintenance = getattr(request.app.state, "maintenance_service", None)
+    if maintenance:
+        await maintenance.trigger()
+
     t0 = time.perf_counter()
     try:
         body = await parse_request_body(request, InitEnvRequestBody)
@@ -521,6 +525,10 @@ async def create_tests_in_suite(request: Request) -> JSONResponse:
 
 
 async def start_run(request: Request) -> JSONResponse:
+    maintenance = getattr(request.app.state, "maintenance_service", None)
+    if maintenance:
+        await maintenance.trigger()
+
     t0 = time.perf_counter()
     try:
         body = await parse_request_body(request, StartRunRequest)
@@ -618,6 +626,10 @@ async def start_run(request: Request) -> JSONResponse:
 
 
 async def evaluate_run(request: Request) -> JSONResponse:
+    maintenance = getattr(request.app.state, "maintenance_service", None)
+    if maintenance:
+        await maintenance.trigger()
+
     try:
         body = await parse_request_body(request, EndRunRequest)
     except ValueError as e:
@@ -847,6 +859,10 @@ async def diff_run(request: Request) -> JSONResponse:
 
 
 async def delete_environment(request: Request) -> JSONResponse:
+    maintenance = getattr(request.app.state, "maintenance_service", None)
+    if maintenance:
+        await maintenance.trigger()
+
     env_id = request.path_params["env_id"]
     session = request.state.db_session
     try:

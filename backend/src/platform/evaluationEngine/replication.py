@@ -261,10 +261,13 @@ class GlobalReplicationWorker(threading.Thread):
 
 class LogicalReplicationService:
     """
-    Single-slot replication service.
+    On-demand single-slot replication service.
 
     Uses ONE global replication slot instead of per-environment slots.
     This avoids slot creation latency and slot limit issues.
+
+    Activates when triggered by incoming requests, runs for a configurable
+    idle timeout, then stops to allow Neon to scale to zero.
     """
 
     def __init__(
@@ -272,20 +275,35 @@ class LogicalReplicationService:
         *,
         session_manager: SessionManager,
         config: ReplicationConfig,
+        idle_timeout: int = 300,  # 5 minutes default
     ):
         self._sessions = session_manager
         self._config = config
+        self._idle_timeout = idle_timeout
         self._writer = ChangeJournalWriter(session_manager)
         self._active_runs: dict[str, ActiveRun] = {}  # schema -> ActiveRun
         self._lock = threading.Lock()
         self._worker: GlobalReplicationWorker | None = None
         self._started = False
+        self._last_activity = 0.0
+        self._idle_checker: threading.Thread | None = None
+        self._stop_idle_checker = threading.Event()
 
-    def start(self) -> None:
-        """Start the global replication service (call once at startup)."""
-        if self._started:
-            return
+    def trigger(self) -> None:
+        """
+        Called on each incoming request. Non-blocking.
 
+        Starts the replication worker if not already running,
+        or just updates last_activity timestamp if running.
+        """
+        self._last_activity = time.time()
+
+        with self._lock:
+            if not self._started:
+                self._start_worker()
+
+    def _start_worker(self) -> None:
+        """Start the replication worker and idle checker. Must hold _lock."""
         # Create the global slot if it doesn't exist
         self._ensure_slot()
 
@@ -298,18 +316,76 @@ class LogicalReplicationService:
         )
         self._worker.start()
         self._started = True
-        logger.info(
-            "Logical replication service started (slot=%s)", self._config.slot_name
+
+        # Start idle checker thread
+        self._stop_idle_checker.clear()
+        self._idle_checker = threading.Thread(
+            target=self._idle_check_loop,
+            daemon=True,
+            name="replication-idle-checker",
         )
+        self._idle_checker.start()
+
+        logger.info(
+            "Replication service activated on-demand (slot=%s)", self._config.slot_name
+        )
+
+    def _idle_check_loop(self) -> None:
+        """Background loop that checks for idle timeout."""
+        while not self._stop_idle_checker.is_set():
+            # Check every 30 seconds
+            self._stop_idle_checker.wait(30)
+            if self._stop_idle_checker.is_set():
+                break
+
+            with self._lock:
+                if not self._started:
+                    continue
+
+                # If there are active runs, update activity and skip shutdown
+                if self._active_runs:
+                    self._last_activity = time.time()
+                    continue
+
+                # Check if idle timeout exceeded
+                idle_duration = time.time() - self._last_activity
+                if idle_duration >= self._idle_timeout:
+                    logger.info(
+                        "Replication service going idle after %.0fs of inactivity",
+                        idle_duration,
+                    )
+                    self._stop_worker_locked()
+
+    def _stop_worker_locked(self) -> None:
+        """Stop the worker. Must hold _lock."""
+        if self._worker:
+            self._worker.stop()
+            # Don't join here - we're in a thread, avoid deadlock
+            self._worker = None
+        self._started = False
+        logger.info("Replication service stopped - Neon can scale to zero")
+
+    def start(self) -> None:
+        """Start the global replication service (for backward compat / manual start)."""
+        self._last_activity = time.time()
+        with self._lock:
+            if not self._started:
+                self._start_worker()
 
     def stop(self) -> None:
         """Stop the global replication service."""
-        if self._worker:
-            self._worker.stop()
-            self._worker.join(timeout=5)
-            self._worker = None
-        self._started = False
-        logger.info("Logical replication service stopped")
+        self._stop_idle_checker.set()
+        if self._idle_checker:
+            self._idle_checker.join(timeout=2)
+            self._idle_checker = None
+
+        with self._lock:
+            if self._worker:
+                self._worker.stop()
+                self._worker.join(timeout=5)
+                self._worker = None
+            self._started = False
+        logger.info("Replication service stopped")
 
     def start_stream(
         self,

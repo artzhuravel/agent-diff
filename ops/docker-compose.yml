@@ -7,9 +7,10 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: "${DATABASE_URL}"
+      LOGICAL_REPLICATION_ENABLED: "true"
       ENVIRONMENT: "development"
-      CLEANUP_INTERVAL_SECONDS: "${CLEANUP_INTERVAL_SECONDS:-30}"
-
+      CLEANUP_INTERVAL_SECONDS: "${CLEANUP_INTERVAL_SECONDS:-15}"
+      SEED: "${SEED:-false}"
     volumes:
       - ../backend:/app
       - ../examples:/examples
@@ -17,10 +18,15 @@ services:
     command: >
       sh -c "
         alembic upgrade head &&
-        python utils/seed_slack_template.py &&
-        python utils/seed_linear_template.py &&
-        python utils/seed_tests.py &&
-        uvicorn src.platform.api.main:app --host 0.0.0.0 --port 8000 --reload
+        if [ \"$$SEED\" = 'true' ]; then
+          echo '=== Seeding enabled, running seed scripts ===' &&
+          python utils/seed_slack_template.py &&
+          python utils/seed_linear_template.py &&
+          python utils/seed_tests.py;
+        else
+          echo '=== Skipping seed (use SEED=true to enable) ===';
+        fi &&
+        uvicorn src.platform.api.main:app --host 0.0.0.0 --port 8000
       "
 
 volumes:

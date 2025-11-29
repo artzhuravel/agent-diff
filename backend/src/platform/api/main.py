@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from src.platform.isolationEngine.session import SessionManager
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -11,7 +12,10 @@ from src.platform.evaluationEngine.replication import (
 )
 from src.platform.isolationEngine.environment import EnvironmentHandler
 from src.platform.isolationEngine.templateManager import TemplateManager
-from src.platform.isolationEngine.cleanup import create_cleanup_service
+from src.platform.isolationEngine.maintenance import (
+    EnvironmentMaintenanceService,
+    parse_pool_targets,
+)
 from src.platform.testManager.core import CoreTestManager
 from starlette.routing import Router
 from src.platform.api.routes import routes as platform_routes
@@ -19,10 +23,6 @@ from src.platform.api.middleware import IsolationMiddleware, PlatformMiddleware
 from src.services.slack.api.methods import routes as slack_routes
 from src.platform.logging_config import setup_logging
 from src.platform.isolationEngine.pool import PoolManager
-from src.platform.isolationEngine.pool_refill import (
-    PoolRefillService,
-    parse_pool_targets,
-)
 from src.platform.db.schema import TemplateEnvironment
 from ariadne import load_schema_from_path, make_executable_schema
 from src.services.linear.api.graphql_linear import LinearGraphQL
@@ -35,9 +35,15 @@ def create_app():
     app = Starlette()
     db_url = environ["DATABASE_URL"]
 
-    platform_engine = create_engine(
-        db_url, pool_size=100, max_overflow=200, pool_pre_ping=True
-    )
+    # Use NullPool when using Neon's PgBouncer (-pooler) to avoid double pooling
+    # Neon's pooler handles connection management, so we don't need SQLAlchemy's pool
+    if "-pooler" in db_url or "pgbouncer=true" in db_url:
+        platform_engine = create_engine(db_url, poolclass=NullPool)
+    else:
+        # Direct connection - use SQLAlchemy pooling
+        platform_engine = create_engine(
+            db_url, pool_size=20, max_overflow=40, pool_pre_ping=True
+        )
     sessions = SessionManager(platform_engine)
     environment_handler = EnvironmentHandler(session_manager=sessions)
     pool_manager = PoolManager(sessions)
@@ -51,26 +57,19 @@ def create_app():
     coreTestManager = CoreTestManager()
     templateManager = TemplateManager()
 
-    # Create replication service first (needed by cleanup)
+    # Create replication service (on-demand, triggered by maintenance service)
     replication_enabled = (
         environ.get("LOGICAL_REPLICATION_ENABLED", "false").lower() == "true"
     )
     replication_service = None
     if replication_enabled:
         replication_config = ReplicationConfig.from_environ(environ, db_url)
+        replication_idle_timeout = int(environ.get("REPLICATION_IDLE_TIMEOUT", 300))
         replication_service = LogicalReplicationService(
             session_manager=sessions,
             config=replication_config,
+            idle_timeout=replication_idle_timeout,
         )
-
-    cleanup_interval = int(environ.get("CLEANUP_INTERVAL_SECONDS", 15))
-    cleanup_service = create_cleanup_service(
-        session_manager=sessions,
-        environment_handler=environment_handler,
-        interval_seconds=cleanup_interval,
-        pool_manager=pool_manager,
-        replication_service=replication_service,
-    )
 
     raw_targets = environ.get("ENVIRONMENT_POOL_TARGETS")
     if raw_targets:
@@ -78,26 +77,29 @@ def create_app():
     else:
         with sessions.with_meta_session() as session:
             templates = session.query(TemplateEnvironment.location).all()
-            pool_targets = {location: 10 for (location,) in templates}
-    pool_refill_interval = int(environ.get("POOL_REFILL_INTERVAL_SECONDS", 15))
-    pool_refill_concurrency = int(environ.get("POOL_REFILL_CONCURRENCY", 5))
-    pool_refill_service = PoolRefillService(
+            pool_targets = {location: 100 for (location,) in templates}
+
+    # Create on-demand maintenance service (replaces cleanup + pool_refill)
+    maintenance_idle_timeout = int(environ.get("MAINTENANCE_IDLE_TIMEOUT", 300))
+    maintenance_cycle_interval = int(environ.get("MAINTENANCE_CYCLE_INTERVAL", 10))
+    maintenance_concurrency = int(environ.get("POOL_REFILL_CONCURRENCY", 5))
+    maintenance_service = EnvironmentMaintenanceService(
         session_manager=sessions,
         environment_handler=environment_handler,
         pool_manager=pool_manager,
-        targets=pool_targets,
-        interval_seconds=pool_refill_interval,
-        max_concurrent_builds=pool_refill_concurrency,
+        pool_targets=pool_targets,
+        idle_timeout=maintenance_idle_timeout,
+        cycle_interval=maintenance_cycle_interval,
+        max_concurrent_builds=maintenance_concurrency,
+        replication_service=replication_service,
     )
 
     app.state.coreIsolationEngine = coreIsolationEngine
-
     app.state.coreEvaluationEngine = coreEvaluationEngine
     app.state.coreTestManager = coreTestManager
     app.state.templateManager = templateManager
     app.state.sessions = sessions
-    app.state.cleanup_service = cleanup_service
-    app.state.pool_refill_service = pool_refill_service
+    app.state.maintenance_service = maintenance_service
     app.state.pool_manager = pool_manager
     app.state.replication_service = replication_service
     app.state.replication_enabled = replication_enabled
@@ -130,21 +132,9 @@ def create_app():
 
     app.mount("/api/env/{env_id}/services/linear", linear_graphql)
 
-    @app.on_event("startup")
-    async def startup_event():
-        await app.state.cleanup_service.start()
-        if app.state.pool_refill_service.has_targets():
-            await app.state.pool_refill_service.start()
-        # Start global replication service (creates slot once)
-        if app.state.replication_service:
-            app.state.replication_service.start()
-
     @app.on_event("shutdown")
     async def shutdown_event():
-        await app.state.cleanup_service.stop()
-        if app.state.pool_refill_service.has_targets():
-            await app.state.pool_refill_service.stop()
-        # Stop global replication service
+        # Stop replication service if running (it's on-demand now)
         if app.state.replication_service:
             app.state.replication_service.stop()
 
