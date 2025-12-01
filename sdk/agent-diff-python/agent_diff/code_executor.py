@@ -15,12 +15,14 @@ class BaseExecutorProxy:
     def __init__(
         self,
         environment_id: str,
-        base_url: str = "http://localhost:8000",
+        base_url: Optional[str] = None,
         token: Optional[str] = None,
     ):
         self.environment_id = environment_id
-        self.base_url = base_url
-        self.token = token
+        self.base_url = (
+            base_url or os.getenv("AGENT_DIFF_BASE_URL") or "http://localhost:8000"
+        )
+        self.token = token or os.getenv("AGENT_DIFF_API_KEY")
 
         self.url_mappings = [
             # Real Slack Web API (https://slack.com/api/*)
@@ -80,7 +82,7 @@ class BaseExecutorProxy:
 class PythonExecutorProxy(BaseExecutorProxy):
     def execute(self, code: str) -> Dict[str, Any]:
         """Execute Python code with network interception."""
-        wrapper_code = f'''
+        wrapper_code = f"""
 import sys
 import json
 import warnings
@@ -164,7 +166,7 @@ try:
 except Exception as e:
     print(f"Error: {{e}}", file=sys.stderr)
     sys.exit(1)
-'''
+"""
         return self._run_code(wrapper_code, ["python3"])
 
     def _indent_code(self, code: str) -> str:
@@ -183,7 +185,9 @@ class BashExecutorProxy(BaseExecutorProxy):
         auth_header_line = ""
         if self.token:
             escaped_token = shlex.quote(self.token)
-            auth_header_line = f'new_args+=("-H" "Authorization: Bearer {escaped_token}")'
+            auth_header_line = (
+                f'new_args+=("-H" "Authorization: Bearer {escaped_token}")'
+            )
 
         wrapper_code = f"""#!/bin/bash
 
