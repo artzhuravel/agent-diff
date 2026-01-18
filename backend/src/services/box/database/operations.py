@@ -1,13 +1,10 @@
 """
 Box Database Operations - CRUD operations for all Box entities.
-
-Following patterns from Slack and Linear replicas.
-Session is passed to all functions (no global session).
 """
 
 import hashlib
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, cast
 
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import Session, joinedload
@@ -45,9 +42,36 @@ from ..utils.errors import (
 )
 
 
-# =============================================================================
+# CONSTANTS
+
+# Allowed sort fields for folder/file listing
+ALLOWED_SORT_FIELDS = frozenset(
+    {
+        "name",
+        "id",
+        "size",
+        "created_at",
+        "modified_at",
+        "content_created_at",
+        "content_modified_at",
+    }
+)
+
+
+class _Unset:
+    """Sentinel for distinguishing 'not provided' from 'None'."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "UNSET"
+
+
+UNSET = _Unset()
+
+
 # USER OPERATIONS
-# =============================================================================
+#
 
 
 def get_user_by_id(session: Session, user_id: str) -> Optional[User]:
@@ -144,9 +168,7 @@ def update_user(
     return user
 
 
-# =============================================================================
 # FOLDER OPERATIONS
-# =============================================================================
 
 
 def get_folder_by_id(
@@ -247,6 +269,35 @@ def create_folder(
     return folder
 
 
+def _is_descendant_of(
+    session: Session, folder_id: str, potential_ancestor_id: str
+) -> bool:
+    """
+    Check if folder_id is a descendant of potential_ancestor_id.
+
+    Used to prevent creating cycles when moving folders.
+    Walks up the ancestry chain from folder_id to check if potential_ancestor_id is encountered.
+    """
+    current_id = folder_id
+    visited = set()  # Prevent infinite loops in case of existing corruption
+
+    while current_id is not None:
+        if current_id in visited:
+            # Already visited - corruption exists, but don't loop forever
+            break
+        visited.add(current_id)
+
+        if current_id == potential_ancestor_id:
+            return True
+
+        current_folder = get_folder_by_id(session, current_id)
+        if current_folder is None:
+            break
+        current_id = current_folder.parent_id
+
+    return False
+
+
 def update_folder(
     session: Session,
     folder_id: str,
@@ -294,12 +345,15 @@ def update_folder(
     if description is not None:
         folder.description = description
     if parent_id is not None:
-        # Validate new parent exists and not self or descendant
+        # Validate new parent exists and is not self or a descendant
         if parent_id == folder_id:
             raise bad_request_error("Cannot move folder into itself")
         new_parent = get_folder_by_id(session, parent_id)
         if not new_parent:
             raise not_found_error("folder", parent_id)
+        # Check if new_parent is a descendant of this folder (would create a cycle)
+        if _is_descendant_of(session, parent_id, folder_id):
+            raise bad_request_error("Cannot move folder into its own descendant")
         folder.parent_id = parent_id
     if tags is not None:
         folder.tags = tags
@@ -341,6 +395,12 @@ def list_folder_items(
     Box API returns folders first, then files, each sorted by the specified field.
     This matches the real Box API behavior.
     """
+    # Validate sort_by against allowed fields to prevent AttributeError
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        raise bad_request_error(
+            f"Invalid sort field '{sort_by}'. Allowed: {', '.join(sorted(ALLOWED_SORT_FIELDS))}"
+        )
+
     folder = get_folder_by_id(session, folder_id)
     if not folder:
         raise not_found_error("folder", folder_id)
@@ -440,9 +500,7 @@ def list_folder_items(
     }
 
 
-# =============================================================================
 # FILE OPERATIONS
-# =============================================================================
 
 
 def get_file_by_id(
@@ -563,8 +621,8 @@ def update_file(
     description: Optional[str] = None,
     parent_id: Optional[str] = None,
     tags: Optional[list] = None,
-    shared_link: Optional[dict] = None,
-    lock: Optional[dict] = None,
+    shared_link: Optional[dict] | _Unset = UNSET,
+    lock: Optional[dict] | _Unset = UNSET,
     if_match: Optional[str] = None,
 ) -> File:
     """
@@ -578,8 +636,9 @@ def update_file(
         description: New description
         parent_id: Move file to new parent folder
         tags: New tags list
-        shared_link: Shared link settings (or None to remove)
-        lock: Lock settings (or None to unlock)
+        shared_link: Shared link settings. Pass None to remove shared link,
+                     or UNSET (default) to leave unchanged.
+        lock: Lock settings. Pass None to unlock, or UNSET (default) to leave unchanged.
         if_match: ETag for conditional update (precondition check)
 
     Matches SDK FilesManager.update_file_by_id parameters.
@@ -633,10 +692,12 @@ def update_file(
         file.parent_id = parent_id
     if tags is not None:
         file.tags = tags
-    if shared_link is not None:
-        file.shared_link = shared_link
-    if lock is not None:
-        file.lock = lock
+    if shared_link is not UNSET:
+        file.shared_link = cast(
+            Optional[dict], shared_link
+        )  # Can be None to remove shared link
+    if lock is not UNSET:
+        file.lock = cast(Optional[dict], lock)  # Can be None to unlock
 
     file.modified_by_id = user_id
     file.modified_at = datetime.utcnow()
@@ -810,9 +871,7 @@ def get_file_content(
     return content_obj.content, content_obj.content_type
 
 
-# =============================================================================
 # COMMENT OPERATIONS
-# =============================================================================
 
 
 def get_comment_by_id(session: Session, comment_id: str) -> Optional[Comment]:
@@ -957,9 +1016,7 @@ def delete_comment(session: Session, comment_id: str) -> bool:
     return True
 
 
-# =============================================================================
 # TASK OPERATIONS
-# =============================================================================
 
 
 def get_task_by_id(session: Session, task_id: str) -> Optional[Task]:
@@ -1091,9 +1148,7 @@ def delete_task(session: Session, task_id: str) -> bool:
     return True
 
 
-# =============================================================================
 # HUB OPERATIONS
-# =============================================================================
 
 
 def get_hub_by_id(
@@ -1289,9 +1344,7 @@ def add_item_to_hub(
     return hub_item
 
 
-# =============================================================================
 # SEARCH OPERATIONS
-# =============================================================================
 
 
 def search_content(

@@ -1,0 +1,421 @@
+{
+    "id": "box-bench",
+    "name": "Box Bench",
+    "description": "Benchmark tests for Box MCP operations",
+    "service": "box",
+    "ignore_fields": {
+        "global": [
+            "created_at",
+            "modified_at",
+            "content_created_at",
+            "content_modified_at",
+            "purged_at",
+            "trashed_at",
+            "etag",
+            "sequence_id",
+            "sha1"
+        ]
+    },
+    "tests": [
+        {
+            "id": "level0_folder_create",
+            "name": "Level 0: Create Folder Call",
+            "prompt": "Call `box_folder_create_tool` to create a folder named 'Test_Folder_0' with parent_folder_id '0'.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_folders",
+                    "where": {
+                        "name": {
+                            "eq": "Test_Folder_0"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level1_search_file",
+            "name": "Level 1: Search for file",
+            "prompt": "Search for files with name containing 'fomcminutes'",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": []
+        },
+        {
+            "id": "level1_get_file_info",
+            "name": "Level 1: Get file info",
+            "prompt": "Get information about the file 'goog-10-q-q2-2025.pdf' (ID 1517335716)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": []
+        },
+        {
+            "id": "level1_create_folder",
+            "name": "Level 1: Create folder",
+            "prompt": "Create a new folder named 'Analysis_2026' inside the 'investments' folder (ID 2217923455)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_folders",
+                    "where": {
+                        "name": {
+                            "eq": "Analysis_2026"
+                        },
+                        "parent_id": {
+                            "eq": "2217923455"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level1_rename_folder",
+            "name": "Level 1: Rename folder",
+            "prompt": "Rename the 'macroeconomics' folder (ID 1533390929) to 'Global Economics'",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "changed",
+                    "entity": "box_folders",
+                    "where": {
+                        "id": {
+                            "eq": "1533390929"
+                        }
+                    },
+                    "expected_changes": {
+                        "name": {
+                            "to": {
+                                "eq": "Global Economics"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "level1_move_file",
+            "name": "Level 1: Move file",
+            "prompt": "Move the file 'transport-april-2025-csv.csv' (ID 2087591570) into the 'investments' folder (ID 2217923455)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "changed",
+                    "entity": "box_files",
+                    "where": {
+                        "id": {
+                            "eq": "2087591570"
+                        }
+                    },
+                    "expected_changes": {
+                        "parent_id": {
+                            "to": {
+                                "eq": "2217923455"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "level1_add_comment",
+            "name": "Level 1: Add comment",
+            "prompt": "Add a comment 'Needs review' to the folder 'investments' (ID 2217923455)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_comments",
+                    "where": {
+                        "message": {
+                            "contains": "Needs review"
+                        },
+                        "item_id": {
+                            "eq": "2217923455"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level1_create_task",
+            "name": "Level 1: Create task",
+            "prompt": "Create a task 'Verify data' for file 'transport-april-2025-csv.csv' (ID 2087591570)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_tasks",
+                    "where": {
+                        "message": {
+                            "eq": "Verify data"
+                        },
+                        "item_id": {
+                            "eq": "2087591570"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level1_list_items",
+            "name": "Level 1: List folder items",
+            "prompt": "List all items in the 'investments' folder (ID 2217923455)",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": []
+        },
+        {
+            "id": "level1_create_hub",
+            "name": "Level 1: Create Hub",
+            "prompt": "Create a new Box Hub titled 'Research Center'",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_hubs",
+                    "where": {
+                        "name": {
+                            "eq": "Research Center"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level2_organize_files",
+            "name": "Level 2: Organize Files (Create + Move)",
+            "prompt": "Create a new folder named 'Finance_Reports' inside 'investments' (ID 2217923455), and then move the file 'goog-10-q-q2-2025.pdf' (ID 1517335716) into it.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_folders",
+                    "where": {
+                        "name": {
+                            "eq": "Finance_Reports"
+                        }
+                    },
+                    "expected_count": 1
+                },
+                {
+                    "diff_type": "changed",
+                    "entity": "box_files",
+                    "where": {
+                        "id": {
+                            "eq": "1517335716"
+                        }
+                    },
+                    "expected_changes": {
+                        "parent_id": {
+                            "to": {
+                                "not_eq": "0"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "level2_review_process",
+            "name": "Level 2: Review Process (Comment + Task)",
+            "prompt": "Add a comment 'Please review this report' to the file 'fomcminutes20250319.pdf' (ID 7034650271) and then create a task 'Review content' for the same file.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_comments",
+                    "where": {
+                        "item_id": {
+                            "eq": "7034650271"
+                        }
+                    },
+                    "expected_count": 1
+                },
+                {
+                    "diff_type": "added",
+                    "entity": "box_tasks",
+                    "where": {
+                        "item_id": {
+                            "eq": "7034650271"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level2_rename_move",
+            "name": "Level 2: Rename and Move",
+            "prompt": "Rename the file 'transport-april-2025-csv.csv' (ID 2087591570) to 'transport_data_v1.csv' and move it to the 'macroeconomics' folder (ID 1533390929).",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "changed",
+                    "entity": "box_files",
+                    "where": {
+                        "id": {
+                            "eq": "2087591570"
+                        }
+                    },
+                    "expected_changes": {
+                        "name": {
+                            "to": {
+                                "eq": "transport_data_v1.csv"
+                            }
+                        },
+                        "parent_id": {
+                            "to": {
+                                "eq": "1533390929"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "level3_find_organize",
+            "name": "Level 3: Find and Organize (Metadata)",
+            "prompt": "Find all files with 'fomc' in their name. Create a new folder named 'FOMC_Reports' in the root directory, and move all found files into it.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_folders",
+                    "where": {
+                        "name": {
+                            "eq": "FOMC_Reports"
+                        }
+                    },
+                    "expected_count": 1
+                },
+                {
+                    "diff_type": "changed",
+                    "entity": "box_files",
+                    "where": {
+                        "name": {
+                            "contains": "fomc"
+                        }
+                    },
+                    "expected_changes": {
+                        "parent_id": {
+                            "to": {
+                                "not_eq": "0"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "id": "level3_contextual_task",
+            "name": "Level 3: Contextual Task (Metadata)",
+            "prompt": "I recall seeing a Google 10-K report in the investments folder. Please find it and create a task on it saying 'Extract revenue numbers'.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_tasks",
+                    "where": {
+                        "message": {
+                            "eq": "Extract revenue numbers"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level3_hub_management",
+            "name": "Level 3: Hub Management",
+            "prompt": "Create a new Hub called 'Economic Data' and add the 'macroeconomics' folder (ID 1533390929) to it.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_hubs",
+                    "where": {
+                        "name": {
+                            "eq": "Economic Data"
+                        }
+                    },
+                    "expected_count": 1
+                },
+                {
+                    "diff_type": "added",
+                    "entity": "box_hub_items",
+                    "where": {
+                        "item_id": {
+                            "eq": "1533390929"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        },
+        {
+            "id": "level4_content_tag",
+            "name": "Level 4: Content Analysis (Tagging)",
+            "prompt": "Read the file '2001 crisis notes.txt' (ID 1506937596). If it mentions 'Argentina', add the tag 'Latin_America' to it.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": []
+        },
+        {
+            "id": "level4_content_summary",
+            "name": "Level 4: Content Summary",
+            "prompt": "Read the file 'transport-april-2025-csv.csv' (ID 2087591570). Count the number of lines in the CSV and add a comment to the file with the number.",
+            "type": "actionEval",
+            "seed_template": "box_default",
+            "impersonate_user_id": "27512847635",
+            "assertions": [
+                {
+                    "diff_type": "added",
+                    "entity": "box_comments",
+                    "where": {
+                        "item_id": {
+                            "eq": "2087591570"
+                        }
+                    },
+                    "expected_count": 1
+                }
+            ]
+        }
+    ]
+}

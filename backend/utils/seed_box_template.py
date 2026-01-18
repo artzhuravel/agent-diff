@@ -38,9 +38,14 @@ TABLE_ORDER = [
 
 
 def create_schema(conn, schema_name: str):
-    """Create a PostgreSQL schema."""
-    conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-    conn.execute(text(f"CREATE SCHEMA {schema_name}"))
+    """Create a PostgreSQL schema.
+
+    Uses double-quoted identifiers to handle schema names with special characters.
+    """
+    # Use double-quoted identifiers for PostgreSQL to safely handle special chars
+    quoted_name = f'"{schema_name}"'
+    conn.execute(text(f"DROP SCHEMA IF EXISTS {quoted_name} CASCADE"))
+    conn.execute(text(f"CREATE SCHEMA {quoted_name}"))
 
 
 def create_tables(conn, schema_name: str):
@@ -80,6 +85,39 @@ def insert_seed_data(conn, schema_name: str, seed_data: dict):
         table.name: set(col.name for col in table.columns)
         for table in Base.metadata.tables.values()
     }
+
+    if "box_file_versions" in seed_data:
+        content_records = []
+        for version_record in seed_data["box_file_versions"]:
+            if "local_path" in version_record:
+                local_path = version_record.pop("local_path")
+                repo_root = Path(__file__).parent.parent.parent
+                file_path = repo_root / local_path
+
+                if file_path.exists():
+                    try:
+                        content = file_path.read_bytes()
+                        # box_file_contents has 'id' (PK, same as version id) and 'version_id' (FK)
+                        content_records.append(
+                            {
+                                "id": version_record[
+                                    "id"
+                                ],  # Use version_id as primary key
+                                "version_id": version_record["id"],
+                                "content": content,
+                            }
+                        )
+                    except Exception as e:
+                        print(f"Warning: Failed to read file {file_path}: {e}")
+                else:
+                    print(f"Warning: Seed file not found: {file_path}")
+
+        # Add generated content records to seed_data
+        if content_records:
+            if "box_file_contents" not in seed_data:
+                seed_data["box_file_contents"] = []
+            seed_data["box_file_contents"].extend(content_records)
+            print(f"  Prepared {len(content_records)} file content records")
 
     for table_name in TABLE_ORDER:
         if table_name not in seed_data:
