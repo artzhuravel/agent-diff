@@ -453,6 +453,12 @@ def list_calendar_list_entries(
         query = query.where(CalendarListEntry.hidden == False)  # noqa: E712
     if min_access_role:
         role_order = ["freeBusyReader", "reader", "writer", "owner"]
+        # Validate min_access_role before using it
+        if min_access_role not in role_order:
+            raise ValidationError(
+                f"Invalid minAccessRole value: {min_access_role}. "
+                f"Must be one of: {', '.join(role_order)}"
+            )
         min_idx = role_order.index(min_access_role)
         allowed_roles = role_order[min_idx:]
         query = query.where(
@@ -785,6 +791,14 @@ def list_events(
         from ..core.utils import expand_recurrence, format_rfc3339, parse_rfc3339
         from datetime import timedelta
         
+        # Parse page_token offset BEFORE expansion so we know how many instances to generate
+        offset = 0
+        if page_token:
+            offset, _ = PageToken.decode(page_token)
+        
+        # Calculate how many instances we need: offset + max_results + 1 (for next page check)
+        instances_needed = offset + max_results + 1
+        
         # Get all non-recurring events first (no pagination yet)
         all_events = list(session.execute(query).scalars().all())
         
@@ -819,7 +833,7 @@ def list_events(
                     start=start_dt,
                     time_min=min_dt,
                     time_max=max_dt,
-                    max_instances=max_results,
+                    max_instances=instances_needed,  # Expand enough for pagination
                 )
             except Exception as e:
                 # Log and skip if recurrence expansion fails
@@ -881,11 +895,7 @@ def list_events(
         else:
             all_events.sort(key=lambda e: (e.start_datetime or datetime.min.replace(tzinfo=timezone.utc), e.id))
         
-        # Apply pagination to combined results
-        offset = 0
-        if page_token:
-            offset, _ = PageToken.decode(page_token)
-        
+        # Apply pagination to combined results (offset already decoded above)
         paginated_events = all_events[offset:offset + max_results + 1]
         
         next_page_token = None
@@ -1258,8 +1268,14 @@ def get_event_instances(
         )
         instances.append(instance)
 
-    # Generate sync token for the response
-    sync_token = generate_sync_token()
+    # Persist sync token for incremental sync support
+    # The token tracks changes to the master event and its instances
+    sync_token = _create_sync_token(
+        session=session,
+        user_id=user_id,
+        resource_type="event_instances",
+        resource_id=event_id,
+    )
 
     return instances, None, sync_token
 
