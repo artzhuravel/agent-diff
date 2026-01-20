@@ -45,23 +45,37 @@ class GoogleCalendarSetup:
         """Clear any existing test events from the primary calendar."""
         print("🧹 Clearing existing test events...")
         
-        # List all events
+        # List all events without q filter to ensure we find all test events
         status, data = self.api_call(
             "GET",
             "/calendars/primary/events",
             params={
-                "maxResults": "100",
-                "q": "Parity Test",  # Search for our test events
+                "maxResults": "250",
             },
         )
         
+        # Collect all matching event IDs (deduplicated)
+        events_to_delete: set[str] = set()
         if status == 200 and "items" in data:
             for event in data["items"]:
-                if "Parity Test" in event.get("summary", "") or event.get("summary", "").startswith("Team Standup") or event.get("summary", "").startswith("Project Review"):
-                    event_id = event["id"]
-                    del_status, _ = self.api_call("DELETE", f"/calendars/primary/events/{event_id}")
-                    if del_status in (200, 204):
-                        print(f"  ✓ Deleted: {event['summary']}")
+                summary = event.get("summary", "")
+                # Match all our test event patterns
+                if (
+                    "Parity Test" in summary
+                    or summary.startswith("Team Standup")
+                    or summary.startswith("Project Review")
+                    or summary.startswith("All-Hands Meeting")
+                ):
+                    events_to_delete.add(event["id"])
+        
+        # Delete all matching events
+        for event_id in events_to_delete:
+            del_status, _ = self.api_call("DELETE", f"/calendars/primary/events/{event_id}")
+            if del_status in (200, 204):
+                print(f"  ✓ Deleted event: {event_id}")
+        
+        if not events_to_delete:
+            print("  No test events found to delete")
         
         print()
 

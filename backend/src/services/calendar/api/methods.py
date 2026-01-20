@@ -1038,6 +1038,7 @@ async def calendar_list_watch(request: Request) -> JSONResponse:
         token=body.get("token"),
         params=body.get("params"),
         payload=body.get("payload", False),
+        user_id=user_id,  # Track ownership
     )
     
     session.add(channel)
@@ -1857,6 +1858,7 @@ async def events_watch(request: Request) -> JSONResponse:
         token=body.get("token"),
         params=body.get("params"),
         payload=body.get("payload", False),
+        user_id=user_id,  # Track ownership
     )
     
     session.add(channel)
@@ -2262,6 +2264,7 @@ async def acl_watch(request: Request) -> JSONResponse:
         address=address,
         expiration=int(expiration) if expiration else None,
         token=body.get("token"),
+        user_id=user_id,  # Track ownership
         params=body.get("params"),
         payload=body.get("payload", False),
     )
@@ -2289,6 +2292,7 @@ async def channels_stop(request: Request) -> JSONResponse:
     Request body: Channel resource with id and resourceId required
     """
     session: Session = request.state.db
+    user_id = get_user_id(request)
     body = await get_request_body(request)
     
     # Validate required fields
@@ -2304,6 +2308,10 @@ async def channels_stop(request: Request) -> JSONResponse:
     channel = get_channel(session, channel_id, resource_id)
     if channel is None:
         raise ChannelNotFoundError(channel_id)
+    
+    # Validate ownership - only the user who created the channel can stop it
+    if channel.user_id is not None and channel.user_id != user_id:
+        raise ForbiddenError("You do not have permission to stop this channel")
     
     # Delete channel
     delete_channel(session, channel_id, resource_id)
@@ -2537,6 +2545,7 @@ async def settings_watch(request: Request) -> JSONResponse:
         token=body.get("token"),
         params=body.get("params"),
         payload=body.get("payload", False),
+        user_id=user_id,  # Track ownership
     )
     
     session.add(channel)

@@ -636,6 +636,8 @@ class Channel(Base):
     params: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     # Whether payload is wanted for notifications
     payload: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # User who created the channel (for ownership validation)
+    user_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

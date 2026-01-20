@@ -763,15 +763,10 @@ def list_events(
     # instead of returning master events
     recurring_masters = []
     if single_events:
-        # First, get recurring masters that match filters (we'll expand them separately)
-        recurring_query = select(Event).where(
-            and_(
-                Event.calendar_id == calendar.id,
-                Event.recurrence != None,  # noqa: E711
-            )
-        )
-        if not show_deleted:
-            recurring_query = recurring_query.where(Event.status != EventStatus.cancelled)
+        # Derive recurring_query from the already-filtered query so it inherits
+        # all filters (q, updated_min, ical_uid, time bounds, etc.)
+        # Add the recurrence predicate to get only recurring masters
+        recurring_query = query.where(Event.recurrence != None)  # noqa: E711
         recurring_masters = list(session.execute(recurring_query).scalars().all())
         
         # Exclude recurring masters from main query (we'll merge expanded instances)

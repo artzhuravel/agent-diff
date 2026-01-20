@@ -1719,15 +1719,55 @@ GET /calendar/v3/calendars/nonexistent-calendar-12345 HTTP/1.1
         """Clean up any remaining test resources."""
         print("\n🧹 Cleaning up test resources...")
 
-        # Delete recurring event
+        # Delete Google recurring event
         if self.google_recurring_event_id:
-            self.google_api("DELETE", f"/calendars/primary/events/{self.google_recurring_event_id}")
-            print(f"  ✓ Deleted Google recurring event")
+            try:
+                self.google_api("DELETE", f"/calendars/primary/events/{self.google_recurring_event_id}")
+                print(f"  ✓ Deleted Google recurring event")
+            except Exception as e:
+                print(f"  ⚠️ Failed to delete Google recurring event: {e}")
 
-        # Delete calendar
+        # Delete Google calendar
         if self.google_calendar_id:
-            self.google_api("DELETE", f"/calendars/{self.google_calendar_id}")
-            print(f"  ✓ Deleted Google test calendar")
+            try:
+                self.google_api("DELETE", f"/calendars/{self.google_calendar_id}")
+                print(f"  ✓ Deleted Google test calendar")
+            except Exception as e:
+                print(f"  ⚠️ Failed to delete Google calendar: {e}")
+
+        # Delete Google all-day event
+        if getattr(self, 'google_all_day_event_id', None):
+            try:
+                self.google_api("DELETE", f"/calendars/primary/events/{self.google_all_day_event_id}")
+                print(f"  ✓ Deleted Google all-day event")
+            except Exception as e:
+                print(f"  ⚠️ Failed to delete Google all-day event: {e}")
+
+        # Clean up replica resources
+        if self.replica_url:
+            # Delete replica recurring event
+            if getattr(self, 'replica_recurring_event_id', None):
+                try:
+                    self.replica_api("DELETE", f"/calendars/primary/events/{self.replica_recurring_event_id}")
+                    print(f"  ✓ Deleted replica recurring event")
+                except Exception as e:
+                    print(f"  ⚠️ Failed to delete replica recurring event: {e}")
+
+            # Delete replica all-day event
+            if getattr(self, 'replica_all_day_event_id', None):
+                try:
+                    self.replica_api("DELETE", f"/calendars/primary/events/{self.replica_all_day_event_id}")
+                    print(f"  ✓ Deleted replica all-day event")
+                except Exception as e:
+                    print(f"  ⚠️ Failed to delete replica all-day event: {e}")
+
+            # Delete replica calendar
+            if self.replica_calendar_id:
+                try:
+                    self.replica_api("DELETE", f"/calendars/{self.replica_calendar_id}")
+                    print(f"  ✓ Deleted replica test calendar")
+                except Exception as e:
+                    print(f"  ⚠️ Failed to delete replica calendar: {e}")
 
 
 def main():
