@@ -1,0 +1,435 @@
+{
+  "calendar_users": [
+    {
+      "id": "user_01",
+      "email": "zhuravelartem42@gmail.com",
+      "display_name": "Test User",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user_02",
+      "email": "bob@example.com",
+      "display_name": "Bob Smith",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user_03",
+      "email": "carol@example.com",
+      "display_name": "Carol Williams",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    }
+  ],
+  "calendars": [
+    {
+      "id": "zhuravelartem42@gmail.com",
+      "summary": "zhuravelartem42@gmail.com",
+      "description": "Primary calendar for Alice",
+      "owner_id": "user_01",
+      "time_zone": "America/New_York",
+      "etag": "\"etag_cal_alice\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "bob@example.com",
+      "summary": "Bob's Calendar",
+      "description": "Primary calendar for Bob",
+      "owner_id": "user_02",
+      "time_zone": "America/Los_Angeles",
+      "etag": "\"etag_cal_bob\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "carol@example.com",
+      "summary": "Carol's Calendar",
+      "description": "Primary calendar for Carol",
+      "owner_id": "user_03",
+      "time_zone": "Europe/London",
+      "etag": "\"etag_cal_carol\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "team_meetings@example.com",
+      "summary": "Team Meetings",
+      "description": "Shared calendar for team meetings",
+      "owner_id": "user_01",
+      "time_zone": "America/New_York",
+      "etag": "\"etag_cal_team\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    }
+  ],
+  "calendar_list_entries": [
+    {
+      "id": "cle_alice_primary",
+      "user_id": "user_01",
+      "calendar_id": "zhuravelartem42@gmail.com",
+      "access_role": "owner",
+      "primary": true,
+      "selected": true,
+      "hidden": false,
+      "deleted": false,
+      "color_id": "1",
+      "background_color": "#ac725e",
+      "foreground_color": "#1d1d1d",
+      "default_reminders": [{"method": "popup", "minutes": 10}],
+      "etag": "\"etag_cle_alice\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "cle_alice_team",
+      "user_id": "user_01",
+      "calendar_id": "team_meetings@example.com",
+      "access_role": "writer",
+      "primary": false,
+      "selected": true,
+      "hidden": false,
+      "deleted": false,
+      "color_id": "2",
+      "background_color": "#d06b64",
+      "foreground_color": "#1d1d1d",
+      "default_reminders": [{"method": "popup", "minutes": 30}],
+      "etag": "\"etag_cle_alice_team\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "cle_bob_primary",
+      "user_id": "user_02",
+      "calendar_id": "bob@example.com",
+      "access_role": "owner",
+      "primary": true,
+      "selected": true,
+      "hidden": false,
+      "deleted": false,
+      "color_id": "3",
+      "background_color": "#f83a22",
+      "foreground_color": "#1d1d1d",
+      "default_reminders": [{"method": "email", "minutes": 60}],
+      "etag": "\"etag_cle_bob\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "cle_carol_primary",
+      "user_id": "user_03",
+      "calendar_id": "carol@example.com",
+      "access_role": "owner",
+      "primary": true,
+      "selected": true,
+      "hidden": false,
+      "deleted": false,
+      "color_id": "4",
+      "background_color": "#fa573c",
+      "foreground_color": "#1d1d1d",
+      "default_reminders": [],
+      "etag": "\"etag_cle_carol\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    }
+  ],
+  "calendar_events": [
+    {
+      "id": "event_001",
+      "calendar_id": "zhuravelartem42@gmail.com",
+      "ical_uid": "event_001@example.com",
+      "summary": "Team Standup",
+      "description": "Daily standup meeting",
+      "location": "Conference Room A",
+      "event_type": "default",
+      "status": "confirmed",
+      "visibility": "default",
+      "transparency": "opaque",
+      "start": {"dateTime": "2025-01-20T09:00:00-05:00", "timeZone": "America/New_York"},
+      "end": {"dateTime": "2025-01-20T09:30:00-05:00", "timeZone": "America/New_York"},
+      "recurrence": ["RRULE:FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"],
+      "creator_email": "zhuravelartem42@gmail.com",
+      "organizer_email": "zhuravelartem42@gmail.com",
+      "guests_can_modify": false,
+      "guests_can_invite_others": true,
+      "guests_can_see_other_guests": true,
+      "anyone_can_add_self": false,
+      "private_copy": false,
+      "locked": false,
+      "sequence": 0,
+      "etag": "\"etag_event_001\"",
+      "html_link": "https://calendar.google.com/calendar/event?eid=event_001",
+      "reminders": {"useDefault": false, "overrides": [{"method": "popup", "minutes": 10}]},
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "event_002",
+      "calendar_id": "zhuravelartem42@gmail.com",
+      "ical_uid": "event_002@example.com",
+      "summary": "Project Review",
+      "description": "Quarterly project review with stakeholders",
+      "location": "Main Conference Room",
+      "event_type": "default",
+      "status": "confirmed",
+      "visibility": "default",
+      "transparency": "opaque",
+      "start": {"dateTime": "2025-01-22T14:00:00-05:00", "timeZone": "America/New_York"},
+      "end": {"dateTime": "2025-01-22T16:00:00-05:00", "timeZone": "America/New_York"},
+      "creator_email": "zhuravelartem42@gmail.com",
+      "organizer_email": "zhuravelartem42@gmail.com",
+      "guests_can_modify": false,
+      "guests_can_invite_others": true,
+      "guests_can_see_other_guests": true,
+      "anyone_can_add_self": false,
+      "private_copy": false,
+      "locked": false,
+      "sequence": 0,
+      "etag": "\"etag_event_002\"",
+      "html_link": "https://calendar.google.com/calendar/event?eid=event_002",
+      "reminders": {"useDefault": false, "overrides": [{"method": "popup", "minutes": 30}, {"method": "email", "minutes": 60}]},
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "event_003",
+      "calendar_id": "bob@example.com",
+      "ical_uid": "event_003@example.com",
+      "summary": "Lunch with Client",
+      "description": "Lunch meeting with ABC Corp",
+      "location": "Downtown Restaurant",
+      "event_type": "default",
+      "status": "confirmed",
+      "visibility": "private",
+      "transparency": "opaque",
+      "start": {"dateTime": "2025-01-21T12:00:00-08:00", "timeZone": "America/Los_Angeles"},
+      "end": {"dateTime": "2025-01-21T13:30:00-08:00", "timeZone": "America/Los_Angeles"},
+      "creator_email": "bob@example.com",
+      "organizer_email": "bob@example.com",
+      "guests_can_modify": false,
+      "guests_can_invite_others": false,
+      "guests_can_see_other_guests": true,
+      "anyone_can_add_self": false,
+      "private_copy": false,
+      "locked": false,
+      "sequence": 0,
+      "etag": "\"etag_event_003\"",
+      "html_link": "https://calendar.google.com/calendar/event?eid=event_003",
+      "reminders": {"useDefault": false, "overrides": [{"method": "popup", "minutes": 15}]},
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "event_004",
+      "calendar_id": "team_meetings@example.com",
+      "ical_uid": "event_004@example.com",
+      "summary": "All-Hands Meeting",
+      "description": "Monthly all-hands company meeting",
+      "location": "Auditorium",
+      "event_type": "default",
+      "status": "confirmed",
+      "visibility": "default",
+      "transparency": "opaque",
+      "start": {"dateTime": "2025-01-25T10:00:00-05:00", "timeZone": "America/New_York"},
+      "end": {"dateTime": "2025-01-25T11:00:00-05:00", "timeZone": "America/New_York"},
+      "recurrence": ["RRULE:FREQ=MONTHLY;BYDAY=4FR"],
+      "creator_email": "zhuravelartem42@gmail.com",
+      "organizer_email": "zhuravelartem42@gmail.com",
+      "guests_can_modify": false,
+      "guests_can_invite_others": false,
+      "guests_can_see_other_guests": true,
+      "anyone_can_add_self": true,
+      "private_copy": false,
+      "locked": false,
+      "sequence": 0,
+      "etag": "\"etag_event_004\"",
+      "html_link": "https://calendar.google.com/calendar/event?eid=event_004",
+      "reminders": {"useDefault": false, "overrides": [{"method": "popup", "minutes": 15}]},
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    }
+  ],
+  "calendar_event_attendees": [
+    {
+      "id": 1,
+      "event_id": "event_002",
+      "email": "zhuravelartem42@gmail.com",
+      "display_name": "Test User",
+      "response_status": "accepted",
+      "organizer": true,
+      "self": false,
+      "optional": false
+    },
+    {
+      "id": 2,
+      "event_id": "event_002",
+      "email": "bob@example.com",
+      "display_name": "Bob Smith",
+      "response_status": "accepted",
+      "organizer": false,
+      "self": false,
+      "optional": false
+    },
+    {
+      "id": 3,
+      "event_id": "event_002",
+      "email": "carol@example.com",
+      "display_name": "Carol Williams",
+      "response_status": "tentative",
+      "organizer": false,
+      "self": false,
+      "optional": true
+    },
+    {
+      "id": 4,
+      "event_id": "event_004",
+      "email": "zhuravelartem42@gmail.com",
+      "display_name": "Test User",
+      "response_status": "accepted",
+      "organizer": true,
+      "self": false,
+      "optional": false
+    },
+    {
+      "id": 5,
+      "event_id": "event_004",
+      "email": "bob@example.com",
+      "display_name": "Bob Smith",
+      "response_status": "needsAction",
+      "organizer": false,
+      "self": false,
+      "optional": false
+    },
+    {
+      "id": 6,
+      "event_id": "event_004",
+      "email": "carol@example.com",
+      "display_name": "Carol Williams",
+      "response_status": "needsAction",
+      "organizer": false,
+      "self": false,
+      "optional": false
+    }
+  ],
+  "calendar_acl_rules": [
+    {
+      "id": "user:zhuravelartem42@gmail.com",
+      "calendar_id": "zhuravelartem42@gmail.com",
+      "role": "owner",
+      "scope_type": "user",
+      "scope_value": "zhuravelartem42@gmail.com",
+      "etag": "\"etag_acl_alice_owner\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user:bob@example.com",
+      "calendar_id": "bob@example.com",
+      "role": "owner",
+      "scope_type": "user",
+      "scope_value": "bob@example.com",
+      "etag": "\"etag_acl_bob_owner\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user:carol@example.com",
+      "calendar_id": "carol@example.com",
+      "role": "owner",
+      "scope_type": "user",
+      "scope_value": "carol@example.com",
+      "etag": "\"etag_acl_carol_owner\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user:alice@example.com_team",
+      "calendar_id": "team_meetings@example.com",
+      "role": "owner",
+      "scope_type": "user",
+      "scope_value": "zhuravelartem42@gmail.com",
+      "etag": "\"etag_acl_team_alice\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "user:bob@example.com_team",
+      "calendar_id": "team_meetings@example.com",
+      "role": "writer",
+      "scope_type": "user",
+      "scope_value": "bob@example.com",
+      "etag": "\"etag_acl_team_bob\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    },
+    {
+      "id": "domain:example.com_team",
+      "calendar_id": "team_meetings@example.com",
+      "role": "reader",
+      "scope_type": "domain",
+      "scope_value": "example.com",
+      "etag": "\"etag_acl_team_domain\"",
+      "created_at": "2025-01-01T00:00:00",
+      "updated_at": "2025-01-01T00:00:00"
+    }
+  ],
+  "calendar_settings": [
+    {
+      "id": 1,
+      "user_id": "user_01",
+      "setting_id": "timezone",
+      "value": "America/New_York",
+      "etag": "\"etag_setting_tz_alice\""
+    },
+    {
+      "id": 2,
+      "user_id": "user_01",
+      "setting_id": "dateFieldOrder",
+      "value": "MDY",
+      "etag": "\"etag_setting_date_alice\""
+    },
+    {
+      "id": 3,
+      "user_id": "user_01",
+      "setting_id": "format24HourTime",
+      "value": "false",
+      "etag": "\"etag_setting_24h_alice\""
+    },
+    {
+      "id": 7,
+      "user_id": "user_01",
+      "setting_id": "weekStart",
+      "value": "0",
+      "etag": "\"etag_setting_weekstart_alice\""
+    },
+    {
+      "id": 8,
+      "user_id": "user_01",
+      "setting_id": "locale",
+      "value": "en",
+      "etag": "\"etag_setting_locale_alice\""
+    },
+    {
+      "id": 4,
+      "user_id": "user_02",
+      "setting_id": "timezone",
+      "value": "America/Los_Angeles",
+      "etag": "\"etag_setting_tz_bob\""
+    },
+    {
+      "id": 5,
+      "user_id": "user_03",
+      "setting_id": "timezone",
+      "value": "Europe/London",
+      "etag": "\"etag_setting_tz_carol\""
+    },
+    {
+      "id": 6,
+      "user_id": "user_03",
+      "setting_id": "format24HourTime",
+      "value": "true",
+      "etag": "\"etag_setting_24h_carol\""
+    }
+  ]
+}
