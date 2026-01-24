@@ -1963,25 +1963,6 @@
       "etag": "0"
     },
     {
-      "id": "4548370820",
-      "type": "file",
-      "name": "argentina 2001 crisis.txt",
-      "parent_id": "1206853609",
-      "created_at": "2025-12-30T00:00:00+00:00",
-      "modified_at": "2025-12-30T00:00:00+00:00",
-      "created_by_id": "27512847635",
-      "modified_by_id": "27512847635",
-      "owned_by_id": "27512847635",
-      "size": 3398,
-      "extension": "txt",
-      "sha_1": "8eb30e0ae5c9825bd6d8fcca94a2f003f7e71026",
-      "version_number": "1",
-      "comment_count": 0,
-      "item_status": "active",
-      "sequence_id": "0",
-      "etag": "0"
-    },
-    {
       "id": "3320893579",
       "type": "file",
       "name": "dirty war overview - class notes (1).md",
@@ -2908,6 +2889,25 @@
       "sha_1": "81d46971235e7fda441bb18601a7aae11a654f7c",
       "version_number": "1",
       "comment_count": 1,
+      "item_status": "active",
+      "sequence_id": "0",
+      "etag": "0"
+    },
+    {
+      "id": "9979104500",
+      "type": "file",
+      "name": "misfiled_crisis_notes.txt",
+      "parent_id": "0",
+      "created_at": "2025-12-30T00:00:00+00:00",
+      "modified_at": "2025-12-30T00:00:00+00:00",
+      "created_by_id": "27512847635",
+      "modified_by_id": "27512847635",
+      "owned_by_id": "27512847635",
+      "size": 3398,
+      "extension": "txt",
+      "sha_1": "8eb30e0ae5c9825bd6d8fcca94a2f003f7e71026",
+      "version_number": "1",
+      "comment_count": 0,
       "item_status": "active",
       "sequence_id": "0",
       "etag": "0"
@@ -3929,19 +3929,6 @@
       "local_path": "examples/box/seeds/filesystem/personal_final/history/BA/memory politcs in transitions.md"
     },
     {
-      "id": "1229617978",
-      "type": "file_version",
-      "file_id": "4548370820",
-      "sha_1": "8eb30e0ae5c9825bd6d8fcca94a2f003f7e71026",
-      "name": "argentina 2001 crisis.txt",
-      "size": 3398,
-      "created_at": "2025-12-30T00:00:00+00:00",
-      "modified_at": "2025-12-30T00:00:00+00:00",
-      "modified_by_id": "27512847635",
-      "version_number": "1",
-      "local_path": "examples/box/seeds/filesystem/personal_final/history/Buenos Aires/argentina 2001 crisis.txt"
-    },
-    {
       "id": "3147517829",
       "type": "file_version",
       "file_id": "3320893579",
@@ -4577,6 +4564,19 @@
       "modified_by_id": "27512847635",
       "version_number": "1",
       "local_path": "examples/box/seeds/filesystem/synth_restoration/moog_minimoog_1974/oscillator_schematic_notes.txt"
+    },
+    {
+      "id": "9979104501",
+      "type": "file_version",
+      "file_id": "9979104500",
+      "sha_1": "8eb30e0ae5c9825bd6d8fcca94a2f003f7e71026",
+      "name": "misfiled_crisis_notes.txt",
+      "size": 3398,
+      "created_at": "2025-12-30T00:00:00+00:00",
+      "modified_at": "2025-12-30T00:00:00+00:00",
+      "modified_by_id": "27512847635",
+      "version_number": "1",
+      "local_path": "examples/box/seeds/filesystem/personal_final/history/2001 crisis notes.txt"
     }
   ],
   "box_comments": [
