@@ -22,6 +22,7 @@ from src.platform.api.routes import routes as platform_routes
 from src.platform.api.middleware import IsolationMiddleware, PlatformMiddleware
 from src.services.slack.api.methods import routes as slack_routes
 from src.services.calendar.api import routes as calendar_routes
+from src.services.box.api.routes import routes as box_routes
 from src.platform.logging_config import setup_logging
 from src.platform.isolationEngine.pool import PoolManager
 from src.platform.db.schema import TemplateEnvironment
@@ -122,6 +123,8 @@ def create_app():
 
     calendar_router = Router(calendar_routes)
     app.mount("/api/env/{env_id}/services/calendar", calendar_router)
+    box_router = Router(box_routes)
+    app.mount("/api/env/{env_id}/services/box/2.0", box_router)
 
     linear_schema_path = "src/services/linear/api/schema/Linear-API.graphql"
     linear_type_defs = load_schema_from_path(linear_schema_path)
