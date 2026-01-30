@@ -13683,24 +13683,22 @@ def resolve_issueRelationUpdate(obj, info, **kwargs):
         if "issueId" in input_data:
             new_issue_id = input_data["issueId"]
             if new_issue_id != issue_relation.issueId:
-                issue_relation.issueId = new_issue_id
-                # Recompute denormalized issueTitle
+                # Validate issue exists before mutating
                 new_issue = session.query(Issue).filter_by(id=new_issue_id).first()
-                if new_issue:
-                    issue_relation.issueTitle = new_issue.title
-                else:
+                if not new_issue:
                     raise Exception(f"Issue with id '{new_issue_id}' not found")
+                issue_relation.issueId = new_issue_id
+                issue_relation.issueTitle = new_issue.title
 
         if "relatedIssueId" in input_data:
             new_related_issue_id = input_data["relatedIssueId"]
             if new_related_issue_id != issue_relation.relatedIssueId:
-                issue_relation.relatedIssueId = new_related_issue_id
-                # Recompute denormalized relatedIssueTitle
+                # Validate related issue exists before mutating
                 new_related_issue = session.query(Issue).filter_by(id=new_related_issue_id).first()
-                if new_related_issue:
-                    issue_relation.relatedIssueTitle = new_related_issue.title
-                else:
+                if not new_related_issue:
                     raise Exception(f"Issue with id '{new_related_issue_id}' not found")
+                issue_relation.relatedIssueId = new_related_issue_id
+                issue_relation.relatedIssueTitle = new_related_issue.title
 
         if "type" in input_data:
             issue_relation.type = input_data["type"]

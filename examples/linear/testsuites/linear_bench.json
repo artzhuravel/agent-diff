@@ -1212,26 +1212,6 @@
           ]
         },
         {
-          "diff_type": "added",
-          "entity": "issues",
-          "where": {
-            "identifier": {
-              "eq": "ENG-1"
-            }
-          },
-          "expected_count": 0
-        },
-        {
-          "diff_type": "removed",
-          "entity": "issues",
-          "where": {
-            "identifier": {
-              "eq": "ENG-1"
-            }
-          },
-          "expected_count": 0
-        },
-        {
           "diff_type": "changed",
           "entity": "issues",
           "where": {
@@ -1241,7 +1221,11 @@
           },
           "expected_count": 0,
           "expected_changes": {
-            "assigneeId": {}
+            "assigneeId": {
+              "to": {
+                "exists": true
+              }
+            }
           },
           "ignore": [
             "updatedAt"

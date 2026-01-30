@@ -993,10 +993,17 @@ def serialize_event_instances(
     elif next_sync_token:
         result["nextSyncToken"] = next_sync_token
     
-    # Updated timestamp (latest event update)
+    # Updated timestamp (latest event update) - always include
     if events:
-        latest_update = max((e.updated_at for e in events if e.updated_at), default=None)
-        if latest_update:
+        timestamps = [e.updated_at for e in events if e.updated_at]
+        if timestamps:
+            latest_update = max(timestamps)
             result["updated"] = _format_datetime(latest_update)
-    
+        else:
+            # Events exist but none have updated_at - use current time
+            result["updated"] = _format_datetime(calendar_now())
+    else:
+        # For empty lists, use current time (Google always includes this)
+        result["updated"] = _format_datetime(calendar_now())
+
     return result
