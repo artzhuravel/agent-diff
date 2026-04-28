@@ -41,15 +41,12 @@ services:
         alembic upgrade head &&
         if [ \"$$SEED\" = 'true' ]; then
           echo '=== Seeding database ===' &&
-          python utils/seed_slack_template.py &&
-          python utils/seed_linear_template.py &&
-          python utils/seed_box_template.py &&
-          python utils/seed_calendar_template.py &&
+          python utils/seed_all.py &&
           python utils/seed_tests.py;
         else
           echo '=== Skipping seed (use SEED=true to enable) ===';
         fi &&
-        uvicorn src.platform.api.main:app --host 0.0.0.0 --port 8000
+        uvicorn src.platform.api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
       "
 
   # External DB mode (Neon, etc) - use: docker-compose --profile external up backend-external
@@ -74,10 +71,7 @@ services:
         alembic upgrade head &&
         if [ \"$$SEED\" = 'true' ]; then
           echo '=== Seeding database ===' &&
-          python utils/seed_slack_template.py &&
-          python utils/seed_linear_template.py &&
-          python utils/seed_box_template.py &&
-          python utils/seed_calendar_template.py &&
+          python utils/seed_all.py &&
           python utils/seed_tests.py;
         else
           echo '=== Skipping seed (use SEED=true to enable) ===';

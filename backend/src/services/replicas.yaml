@@ -1,0 +1,29 @@
+rest:
+- slug: slack
+  mount_path: /api/env/{env_id}/services/slack
+  routes_module: src.services.slack.api.methods
+  routes_attr: routes
+  seed_command: python utils/seed_template.py --app slack
+- slug: calendar
+  mount_path: /api/env/{env_id}/services/calendar
+  routes_module: src.services.calendar.api
+  routes_attr: routes
+  seed_command: python utils/seed_template.py --app calendar
+- slug: box
+  mount_path: /api/env/{env_id}/services/box/2.0
+  routes_module: src.services.box.api.routes
+  routes_attr: routes
+  seed_command: python utils/seed_box_template.py
+- slug: asana
+  mount_path: /api/env/{env_id}/services/asana
+  routes_module: src.services.asana.api.routes
+  routes_attr: routes
+  seed_command: python utils/seed_template.py --app asana
+- slug: github
+  mount_path: /api/env/{env_id}/services/github
+  routes_module: src.services.github.api.routes
+  routes_attr: routes
+  seed_command: python utils/seed_template.py --app github
+graphql:
+- slug: linear
+  seed_command: python utils/seed_linear_template.py
