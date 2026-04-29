@@ -60,24 +60,11 @@ def group_references_by_pair(
             source = result.subject or _UNRESOLVED
             method_upper = method.upper()
 
-            for path_reference in result.path_references:
-                groups.setdefault((source, path_reference.resource), []).append(
-                    ReferenceEvidence(method_upper, path, path_reference.source, path_reference.token)
-                )
-            for parameter_reference in result.parameter_references:
-                groups.setdefault((source, parameter_reference.resource), []).append(
-                    ReferenceEvidence(method_upper, path, parameter_reference.location, parameter_reference.token)
-                )
-            for body_reference in result.body_references:
-                groups.setdefault((source, body_reference.resource), []).append(
-                    ReferenceEvidence(
-                        method_upper, path,
-                        f"body_{body_reference.role}",
-                        f"{body_reference.media_type}:{body_reference.schema_name}",
-                    )
-                )
-            for property_reference in result.property_references:
-                groups.setdefault((source, property_reference.resource), []).append(
-                    ReferenceEvidence(method_upper, path, "property", ".".join(property_reference.path))
+            # All four walks produce the same ``Reference(resource, kind,
+            # location)`` shape, so a single loop converts every per-endpoint
+            # reference into the cross-endpoint evidence record.
+            for reference in result.references:
+                groups.setdefault((source, reference.resource), []).append(
+                    ReferenceEvidence(method_upper, path, reference.kind, reference.location)
                 )
     return groups

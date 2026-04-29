@@ -9,7 +9,7 @@ import yaml
 
 from pipeline.config import PipelineConfig, load_config
 from pipeline.extraction.endpoint_references import (
-    ParameterReference,
+    Reference,
     find_parameter_references,
 )
 
@@ -45,7 +45,7 @@ def test_query_parameter_hit(tmp_path: Path) -> None:
     }
     references = find_parameter_references(path_item, config)
     assert references == [
-        ParameterReference(token="user_id", resource="users", location="query"),
+        Reference(resource="users", kind="query", location="user_id"),
     ]
 
 
@@ -75,8 +75,8 @@ def test_header_and_cookie_parameters_hit(tmp_path: Path) -> None:
         },
     }
     references = find_parameter_references(path_item, config)
-    locations = {reference.location for reference in references}
-    assert locations == {"header", "cookie"}
+    kinds = {reference.kind for reference in references}
+    assert kinds == {"header", "cookie"}
 
 
 def test_path_level_shared_parameters_are_walked(tmp_path: Path) -> None:
@@ -91,7 +91,7 @@ def test_path_level_shared_parameters_are_walked(tmp_path: Path) -> None:
     references = find_parameter_references(path_item, config)
     assert len(references) == 1
     assert references[0].resource == "repos"
-    assert references[0].location == "query"
+    assert references[0].kind == "query"
 
 
 def test_ref_parameter_is_silently_skipped(tmp_path: Path) -> None:
@@ -121,7 +121,7 @@ def test_non_matching_token_is_ignored(tmp_path: Path) -> None:
 
 
 def test_duplicate_declarations_dedup(tmp_path: Path) -> None:
-    """Same (token, resource, location) declared at path + op dedupes to one."""
+    """Same (token, resource, kind) declared at path + op dedupes to one."""
     config = _config(tmp_path, {"repos": {"aliases": ["repo"]}})
     path_item = {
         "parameters": [{"name": "repo", "in": "query"}],
@@ -132,8 +132,8 @@ def test_duplicate_declarations_dedup(tmp_path: Path) -> None:
     }
     references = find_parameter_references(path_item, config)
     assert len(references) == 1
-    assert references[0].token == "repo"
-    assert references[0].location == "query"
+    assert references[0].location == "repo"
+    assert references[0].kind == "query"
 
 
 def test_same_token_across_locations_keeps_each_entry(tmp_path: Path) -> None:
@@ -149,5 +149,5 @@ def test_same_token_across_locations_keeps_each_entry(tmp_path: Path) -> None:
         },
     }
     references = find_parameter_references(path_item, config)
-    locations = {reference.location for reference in references}
-    assert locations == {"query", "header"}
+    kinds = {reference.kind for reference in references}
+    assert kinds == {"query", "header"}

@@ -557,24 +557,6 @@ appear in only some schemas should be nullable.
 Each entry below is an endpoint that operates on **tasks**. Build
 one operation function and one route handler per endpoint.
 
-#### DELETE /tasks/{task_gid}
-_Delete a task_
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tasks
-_Get multiple tasks_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - assignee (query, optional): string
-  - project (query, optional): string
-  - section (query, optional): string
-  - workspace (query, optional): string
-  - completed_since (query, optional): string
-  - modified_since (query, optional): string
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
 #### GET /tasks/{task_gid}
 _Get a task_
 Parameters:

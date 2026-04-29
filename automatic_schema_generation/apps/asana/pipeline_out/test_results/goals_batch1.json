@@ -1,0 +1,85 @@
+{
+  "results": [
+    {
+      "method": "POST",
+      "path": "/goals",
+      "passed": true,
+      "iterations": 0,
+      "diagnosis": "Returns 201 with full GoalResponse shape including gid, resource_type, name, notes, followers, owner, workspace, team, time_period, and all other fields.",
+      "curl_examples": [
+        "curl -s -X POST http://localhost:8000/api/env/$ENV/services/asana/goals -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' -d '{\"data\":{\"name\":\"Grow web traffic by 30%\",\"notes\":\"Start building brand awareness.\",\"workspace\":\"12345\"}}'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "GET",
+      "path": "/goals",
+      "passed": true,
+      "iterations": 0,
+      "diagnosis": "Returns 200 with paginated list of GoalCompact objects (gid, resource_type, name, owner) and next_page field. Filtering by workspace works correctly.",
+      "curl_examples": [
+        "curl -s http://localhost:8000/api/env/$ENV/services/asana/goals -H 'x-impersonate-user-id: test-user'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/addFollowers",
+      "passed": true,
+      "iterations": 0,
+      "diagnosis": "Returns 200 with full GoalResponse including newly added followers. Returns 404 with error envelope for fake goal_gid.",
+      "curl_examples": [
+        "curl -s -X POST http://localhost:8000/api/env/$ENV/services/asana/goals/<gid>/addFollowers -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' -d '{\"data\":{\"followers\":[\"13579\",\"321654\"]}}'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/removeFollowers",
+      "passed": true,
+      "iterations": 0,
+      "diagnosis": "Returns 200 with full GoalResponse with specified followers removed. Returns 404 with error envelope for fake goal_gid.",
+      "curl_examples": [
+        "curl -s -X POST http://localhost:8000/api/env/$ENV/services/asana/goals/<gid>/removeFollowers -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' -d '{\"data\":{\"followers\":[\"13579\"]}}'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "GET",
+      "path": "/goals/{goal_gid}/parentGoals",
+      "passed": true,
+      "iterations": 0,
+      "diagnosis": "Returns 200 with array of GoalCompact parent goals after setting up a parent-child relationship via addSubgoal. Returns empty array for goals with no parent.",
+      "curl_examples": [
+        "curl -s http://localhost:8000/api/env/$ENV/services/asana/goals/<child_gid>/parentGoals -H 'x-impersonate-user-id: test-user'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/addSupportingRelationship",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Returns 200 with GoalRelationshipResponse including gid, resource_type, resource_subtype, supporting_resource, contribution_weight, and supported_goal. Returns 404 for fake goal_gid. Also establishes parent_goal_gid relationship for goal-type supporting resources.",
+      "curl_examples": [
+        "curl -s -X POST http://localhost:8000/api/env/$ENV/services/asana/goals/<gid>/addSupportingRelationship -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' -d '{\"data\":{\"supporting_resource\":\"<supporting_gid>\",\"contribution_weight\":0.5}}'"
+      ],
+      "code_changes": [
+        {"file": "backend/src/services/asana/api/routes.py", "summary": "Rewrote addSupportingRelationship handler to return GoalRelationshipResponse shape and establish parent_goal_gid relationship for goal-type supporting resources"}
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/removeSupportingRelationship",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Returns 200 with EmptyResponse after removing the supporting relationship. Clears parent_goal_gid on supporting goals. Returns 404 for fake goal_gid.",
+      "curl_examples": [
+        "curl -s -X POST http://localhost:8000/api/env/$ENV/services/asana/goals/<gid>/removeSupportingRelationship -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' -d '{\"data\":{\"supporting_resource\":\"<supporting_gid>\"}}'"
+      ],
+      "code_changes": [
+        {"file": "backend/src/services/asana/api/routes.py", "summary": "Rewrote removeSupportingRelationship handler to actually clear parent_goal_gid on supporting goal resources"}
+      ]
+    }
+  ]
+}

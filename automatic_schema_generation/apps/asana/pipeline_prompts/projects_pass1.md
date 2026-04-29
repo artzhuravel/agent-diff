@@ -34,7 +34,465 @@ ORM model to cover the union of all fields across these schemas. Fields that
 appear in only some schemas should be nullable.
 
 ```json
-{}
+{
+  "ProjectBase": {
+    "allOf": [
+      {
+        "$ref": "#/schemas/ProjectCompact"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "description": "True if the project is archived, false if not. Archived projects do not show in the UI by default and may be treated differently for queries.",
+            "type": "boolean",
+            "example": false
+          },
+          "color": {
+            "description": "Color of the project.",
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "dark-pink",
+              "dark-green",
+              "dark-blue",
+              "dark-red",
+              "dark-teal",
+              "dark-brown",
+              "dark-orange",
+              "dark-purple",
+              "dark-warm-gray",
+              "light-pink",
+              "light-green",
+              "light-blue",
+              "light-red",
+              "light-teal",
+              "light-brown",
+              "light-orange",
+              "light-purple",
+              "light-warm-gray",
+              "none",
+              null
+            ],
+            "example": "light-green"
+          },
+          "icon": {
+            "description": "The icon for a project.",
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "list",
+              "board",
+              "timeline",
+              "calendar",
+              "rocket",
+              "people",
+              "graph",
+              "star",
+              "bug",
+              "light_bulb",
+              "globe",
+              "gear",
+              "notebook",
+              "computer",
+              "check",
+              "target",
+              "html",
+              "megaphone",
+              "chat_bubbles",
+              "briefcase",
+              "page_layout",
+              "mountain_flag",
+              "puzzle",
+              "presentation",
+              "line_and_symbols",
+              "speed_dial",
+              "ribbon",
+              "shoe",
+              "shopping_basket",
+              "map",
+              "ticket",
+              "coins"
+            ],
+            "example": "chat_bubbles"
+          },
+          "created_at": {
+            "description": "The time at which this resource was created.",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "example": "2012-02-22T02:06:58.147Z"
+          },
+          "current_status": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/ProjectStatusResponse"
+              },
+              {
+                "type": "object",
+                "nullable": true,
+                "description": "*Deprecated: new integrations should prefer the `current_status_update` resource.*"
+              }
+            ]
+          },
+          "current_status_update": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/StatusUpdateCompact"
+              },
+              {
+                "type": "object",
+                "nullable": true,
+                "description": "The latest `status_update` posted to this project."
+              }
+            ]
+          },
+          "custom_field_settings": {
+            "description": "Array of custom field definitions that are enabled for the project. These represent which custom fields are available to be used on tasks within the project, but do not include any values.",
+            "readOnly": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CustomFieldSettingResponse"
+            }
+          },
+          "default_view": {
+            "description": "The default view (list, board, calendar, or timeline) of a project.",
+            "type": "string",
+            "enum": [
+              "list",
+              "board",
+              "calendar",
+              "timeline"
+            ],
+            "example": "calendar"
+          },
+          "due_date": {
+            "description": "*Deprecated: new integrations should prefer the `due_on` field.*",
+            "type": "string",
+            "nullable": true,
+            "format": "date",
+            "example": "2019-09-15"
+          },
+          "due_on": {
+            "description": "The day on which this project is due. This takes a date with format YYYY-MM-DD.",
+            "type": "string",
+            "nullable": true,
+            "format": "date",
+            "example": "2019-09-15"
+          },
+          "html_notes": {
+            "description": "[Opt In](/docs/inputoutput-options). The notes of the project with formatting as HTML.",
+            "type": "string",
+            "example": "<body>These are things we need to purchase.</body>"
+          },
+          "members": {
+            "description": "Array of users who are members of this project.",
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/UserCompact"
+            },
+            "readOnly": true
+          },
+          "modified_at": {
+            "description": "The time at which this project was last modified.\n*Note: This does not currently reflect any changes in associations such as tasks or comments that may have been added or removed from the project.*",
+            "type": "string",
+            "readOnly": true,
+            "format": "date-time",
+            "example": "2012-02-22T02:06:58.147Z"
+          },
+          "notes": {
+            "description": "Free-form textual information associated with the project (ie., its description).",
+            "type": "string",
+            "example": "These are things we need to purchase."
+          },
+          "public": {
+            "description": "*Deprecated:* new integrations use `privacy_setting` instead.",
+            "type": "boolean",
+            "deprecated": true,
+            "example": false
+          },
+          "privacy_setting": {
+            "description": "The privacy setting of the project. *Note: Administrators in your organization may restrict the values of `privacy_setting`.* The value `private_to_team` is deprecated. Use `POST /memberships` to share a project with a team after creation.",
+            "type": "string",
+            "enum": [
+              "public_to_workspace",
+              "private_to_team",
+              "private"
+            ],
+            "example": "public_to_workspace"
+          },
+          "start_on": {
+            "description": "The day on which work for this project begins, or null if the project has no start date. This takes a date with `YYYY-MM-DD` format. *Note: `due_on` or `due_at` must be present in the request when setting or unsetting the `start_on` parameter. Additionally, `start_on` and `due_on` cannot be the same date.*",
+            "type": "string",
+            "nullable": true,
+            "format": "date",
+            "example": "2019-09-14"
+          },
+          "default_access_level": {
+            "description": "The default access for users or teams who join or are added as members to the project.",
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "commenter",
+              "viewer"
+            ],
+            "example": "admin"
+          },
+          "minimum_access_level_for_customization": {
+            "description": "The minimum access level needed for project members to modify this project's workflow and appearance.",
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor"
+            ],
+            "example": "admin"
+          },
+          "minimum_access_level_for_sharing": {
+            "description": "The minimum access level needed for project members to share the project and manage project memberships.",
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor"
+            ],
+            "example": "admin"
+          }
+        }
+      }
+    ]
+  },
+  "ProjectCompact": {
+    "description": "A *project* represents a prioritized list of tasks in Asana or a board with columns of tasks represented as cards. It exists in a single workspace or organization and is accessible to a subset of users in that workspace or organization, depending on its permissions.",
+    "type": "object",
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      },
+      "resource_type": {
+        "description": "The base type of this resource.",
+        "type": "string",
+        "readOnly": true,
+        "example": "project",
+        "x-insert-after": "gid"
+      },
+      "name": {
+        "description": "Name of the project. This is generally a short sentence fragment that fits on a line in the UI for maximum readability. However, it can be longer.",
+        "type": "string",
+        "example": "Stuff to buy"
+      }
+    }
+  },
+  "ProjectRequest": {
+    "allOf": [
+      {
+        "$ref": "#/schemas/ProjectBase"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "custom_fields": {
+            "description": "An object where each key is the GID of a custom field and its corresponding value is either an enum GID, string, number, or object (depending on the custom field type). See the [custom fields guide](/docs/custom-fields-guide) for details on creating and updating custom field values.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "description": "\"{custom_field_gid}\" => Value (can be text, a number, etc.). For date, use format \"YYYY-MM-DD\" (e.g., 2019-09-15). For date-time, use ISO 8601 date string in UTC (e.g., 2019-09-15T02:06:58.147Z)."
+            },
+            "example": {
+              "5678904321": "On Hold",
+              "4578152156": "Not Started"
+            }
+          },
+          "followers": {
+            "description": "*Create-only*. Comma separated string of users. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
+            "type": "string",
+            "example": "12345,23456"
+          },
+          "owner": {
+            "description": "The current owner of the project, may be null.",
+            "nullable": true,
+            "type": "string",
+            "example": "12345"
+          },
+          "team": {
+            "description": "*Deprecated:* The team to share this project with is deprecated. Use `POST /memberships` with `{ parent: project, member: team }` to share a project with a team after creation.",
+            "deprecated": true,
+            "type": "string",
+            "example": "12345"
+          },
+          "workspace": {
+            "type": "string",
+            "description": "The `gid` of a workspace.",
+            "example": "12345"
+          }
+        }
+      }
+    ]
+  },
+  "ProjectResponse": {
+    "allOf": [
+      {
+        "$ref": "#/schemas/ProjectBase"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "custom_fields": {
+            "description": "Array of custom field values applied directly to the project itself. These represent the values set on the project, not the fields available for tasks in the project.",
+            "readOnly": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CustomFieldCompact"
+            }
+          },
+          "completed": {
+            "description": "True if the project is currently marked complete, false if not.",
+            "type": "boolean",
+            "readOnly": true,
+            "example": false
+          },
+          "completed_at": {
+            "description": "The time at which this project was completed, or null if the project is not completed.",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true,
+            "example": "2012-02-22T02:06:58.147Z"
+          },
+          "completed_by": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/UserCompact"
+              },
+              {
+                "description": "The user that marked this project complete, or null if the project is not completed.",
+                "readOnly": true,
+                "nullable": true
+              }
+            ]
+          },
+          "followers": {
+            "description": "Array of users following this project. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/UserCompact"
+            },
+            "readOnly": true
+          },
+          "owner": {
+            "description": "The current owner of the project, may be null.",
+            "allOf": [
+              {
+                "$ref": "#/schemas/UserCompact"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ]
+          },
+          "team": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/TeamCompact"
+              },
+              {
+                "type": "object",
+                "description": "The team that this project is shared with."
+              }
+            ]
+          },
+          "permalink_url": {
+            "type": "string",
+            "readOnly": true,
+            "description": "A url that points directly to the object within Asana.",
+            "example": "https://app.asana.com/1/12345/project/123456789"
+          },
+          "project_brief": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/ProjectBriefCompact"
+              },
+              {
+                "type": "object",
+                "description": "[Opt In](/docs/inputoutput-options). The project brief associated with this project.",
+                "nullable": true
+              }
+            ]
+          },
+          "created_from_template": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/ProjectTemplateCompact"
+              },
+              {
+                "type": "object",
+                "description": "[Opt In](/docs/inputoutput-options). The project template from which this project was created. If the project was not created from a template, this field will be null.",
+                "nullable": true
+              }
+            ]
+          },
+          "workspace": {
+            "allOf": [
+              {
+                "$ref": "#/schemas/WorkspaceCompact"
+              },
+              {
+                "type": "object",
+                "readOnly": true,
+                "description": "*Create-only*. The workspace or organization this project is associated with. Once created, projects cannot be moved to a different workspace. This attribute can only be specified at creation time. If the workspace for your project is an organization, you must also supply a `team` in the request body."
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "ProjectUpdateRequest": {
+    "allOf": [
+      {
+        "$ref": "#/schemas/ProjectBase"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "custom_fields": {
+            "description": "An object where each key is the GID of a custom field and its corresponding value is either an enum GID, string, number, or object (depending on the custom field type). See the [custom fields guide](/docs/custom-fields-guide) for details on creating and updating custom field values.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "description": "\"{custom_field_gid}\" => Value (can be text, a number, etc.). For date, use format \"YYYY-MM-DD\" (e.g., 2019-09-15). For date-time, use ISO 8601 date string in UTC (e.g., 2019-09-15T02:06:58.147Z)."
+            },
+            "example": {
+              "5678904321": "On Hold",
+              "4578152156": "Not Started"
+            }
+          },
+          "followers": {
+            "description": "*Create-only*. Comma separated string of users. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
+            "type": "string",
+            "example": "12345,23456"
+          },
+          "owner": {
+            "description": "The current owner of the project, may be null.",
+            "nullable": true,
+            "type": "string",
+            "example": "12345"
+          },
+          "team": {
+            "description": "*Deprecated:* Updating the team a project is shared with is deprecated. Use `POST /memberships` with `{ parent: project, member: team }` instead to manage team sharing.",
+            "deprecated": true,
+            "type": "string",
+            "example": "12345"
+          }
+        }
+      }
+    ]
+  }
+}
 ```
 
 ### Endpoints
@@ -42,195 +500,8 @@ appear in only some schemas should be nullable.
 Each entry below is an endpoint that operates on **projects**. Build
 one operation function and one route handler per endpoint.
 
-#### DELETE /projects/{project_gid}
-_Delete a project_
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects
-_Get multiple projects_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - workspace (query, optional): string
-  - team (query, optional): string
-  - archived (query, optional): boolean
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}
-_Get a project_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}/custom_field_settings
-_Get a project's custom fields_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}/project_memberships
-_Get memberships from a project_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}/project_portfolio_settings
-_Get project portfolio settings for a project_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}/project_statuses
-_Get statuses from a project_
-Parameters:
-  - project_gid (path, required): string
-  - opt_pretty (query, optional): boolean
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /projects/{project_gid}/task_counts
-_Get task count of a project_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tasks/{task_gid}/projects
-_Get projects a task is in_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /teams/{team_gid}/projects
-_Get a team's projects_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - archived (query, optional): boolean
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /workspaces/{workspace_gid}/projects
-_Get all projects in a workspace_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - archived (query, optional): boolean
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /workspaces/{workspace_gid}/projects/search
-_Search projects in a workspace_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 402, 403, 404, 500
-
 #### POST /projects
 _Create a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/addCustomFieldSetting
-_Add a custom field to a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/addFollowers
-_Add followers to a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/addMembers
-_Add users to a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/duplicate
-_Duplicate a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/project_briefs
-_Create a project brief_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 402, 403, 404, 500
-
-#### POST /projects/{project_gid}/project_statuses
-_Create a project status_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/removeCustomFieldSetting
-_Remove a custom field from a project_
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/removeFollowers
-_Remove followers from a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/removeMembers
-_Remove users from a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /projects/{project_gid}/saveAsTemplate
-_Create a project template from a project_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /teams/{team_gid}/projects
-_Create a project in a team_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /workspaces/{workspace_gid}/projects
-_Create a project in a workspace_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### PUT /projects/{project_gid}
-_Update a project_
 Parameters:
   - opt_fields (query, optional): array
 Request body (application/json):
@@ -1220,232 +1491,6 @@ accept.
       }
     }
   },
-  "ProjectBase": {
-    "allOf": [
-      {
-        "$ref": "#/schemas/ProjectCompact"
-      },
-      {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "description": "True if the project is archived, false if not. Archived projects do not show in the UI by default and may be treated differently for queries.",
-            "type": "boolean",
-            "example": false
-          },
-          "color": {
-            "description": "Color of the project.",
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "dark-pink",
-              "dark-green",
-              "dark-blue",
-              "dark-red",
-              "dark-teal",
-              "dark-brown",
-              "dark-orange",
-              "dark-purple",
-              "dark-warm-gray",
-              "light-pink",
-              "light-green",
-              "light-blue",
-              "light-red",
-              "light-teal",
-              "light-brown",
-              "light-orange",
-              "light-purple",
-              "light-warm-gray",
-              "none",
-              null
-            ],
-            "example": "light-green"
-          },
-          "icon": {
-            "description": "The icon for a project.",
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "list",
-              "board",
-              "timeline",
-              "calendar",
-              "rocket",
-              "people",
-              "graph",
-              "star",
-              "bug",
-              "light_bulb",
-              "globe",
-              "gear",
-              "notebook",
-              "computer",
-              "check",
-              "target",
-              "html",
-              "megaphone",
-              "chat_bubbles",
-              "briefcase",
-              "page_layout",
-              "mountain_flag",
-              "puzzle",
-              "presentation",
-              "line_and_symbols",
-              "speed_dial",
-              "ribbon",
-              "shoe",
-              "shopping_basket",
-              "map",
-              "ticket",
-              "coins"
-            ],
-            "example": "chat_bubbles"
-          },
-          "created_at": {
-            "description": "The time at which this resource was created.",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true,
-            "example": "2012-02-22T02:06:58.147Z"
-          },
-          "current_status": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/ProjectStatusResponse"
-              },
-              {
-                "type": "object",
-                "nullable": true,
-                "description": "*Deprecated: new integrations should prefer the `current_status_update` resource.*"
-              }
-            ]
-          },
-          "current_status_update": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/StatusUpdateCompact"
-              },
-              {
-                "type": "object",
-                "nullable": true,
-                "description": "The latest `status_update` posted to this project."
-              }
-            ]
-          },
-          "custom_field_settings": {
-            "description": "Array of custom field definitions that are enabled for the project. These represent which custom fields are available to be used on tasks within the project, but do not include any values.",
-            "readOnly": true,
-            "type": "array",
-            "items": {
-              "$ref": "#/schemas/CustomFieldSettingResponse"
-            }
-          },
-          "default_view": {
-            "description": "The default view (list, board, calendar, or timeline) of a project.",
-            "type": "string",
-            "enum": [
-              "list",
-              "board",
-              "calendar",
-              "timeline"
-            ],
-            "example": "calendar"
-          },
-          "due_date": {
-            "description": "*Deprecated: new integrations should prefer the `due_on` field.*",
-            "type": "string",
-            "nullable": true,
-            "format": "date",
-            "example": "2019-09-15"
-          },
-          "due_on": {
-            "description": "The day on which this project is due. This takes a date with format YYYY-MM-DD.",
-            "type": "string",
-            "nullable": true,
-            "format": "date",
-            "example": "2019-09-15"
-          },
-          "html_notes": {
-            "description": "[Opt In](/docs/inputoutput-options). The notes of the project with formatting as HTML.",
-            "type": "string",
-            "example": "<body>These are things we need to purchase.</body>"
-          },
-          "members": {
-            "description": "Array of users who are members of this project.",
-            "type": "array",
-            "items": {
-              "$ref": "#/schemas/UserCompact"
-            },
-            "readOnly": true
-          },
-          "modified_at": {
-            "description": "The time at which this project was last modified.\n*Note: This does not currently reflect any changes in associations such as tasks or comments that may have been added or removed from the project.*",
-            "type": "string",
-            "readOnly": true,
-            "format": "date-time",
-            "example": "2012-02-22T02:06:58.147Z"
-          },
-          "notes": {
-            "description": "Free-form textual information associated with the project (ie., its description).",
-            "type": "string",
-            "example": "These are things we need to purchase."
-          },
-          "public": {
-            "description": "*Deprecated:* new integrations use `privacy_setting` instead.",
-            "type": "boolean",
-            "deprecated": true,
-            "example": false
-          },
-          "privacy_setting": {
-            "description": "The privacy setting of the project. *Note: Administrators in your organization may restrict the values of `privacy_setting`.* The value `private_to_team` is deprecated. Use `POST /memberships` to share a project with a team after creation.",
-            "type": "string",
-            "enum": [
-              "public_to_workspace",
-              "private_to_team",
-              "private"
-            ],
-            "example": "public_to_workspace"
-          },
-          "start_on": {
-            "description": "The day on which work for this project begins, or null if the project has no start date. This takes a date with `YYYY-MM-DD` format. *Note: `due_on` or `due_at` must be present in the request when setting or unsetting the `start_on` parameter. Additionally, `start_on` and `due_on` cannot be the same date.*",
-            "type": "string",
-            "nullable": true,
-            "format": "date",
-            "example": "2019-09-14"
-          },
-          "default_access_level": {
-            "description": "The default access for users or teams who join or are added as members to the project.",
-            "type": "string",
-            "enum": [
-              "admin",
-              "editor",
-              "commenter",
-              "viewer"
-            ],
-            "example": "admin"
-          },
-          "minimum_access_level_for_customization": {
-            "description": "The minimum access level needed for project members to modify this project's workflow and appearance.",
-            "type": "string",
-            "enum": [
-              "admin",
-              "editor"
-            ],
-            "example": "admin"
-          },
-          "minimum_access_level_for_sharing": {
-            "description": "The minimum access level needed for project members to share the project and manage project memberships.",
-            "type": "string",
-            "enum": [
-              "admin",
-              "editor"
-            ],
-            "example": "admin"
-          }
-        }
-      }
-    ]
-  },
   "ProjectBriefBase": {
     "allOf": [
       {
@@ -1538,31 +1583,6 @@ accept.
         }
       }
     ]
-  },
-  "ProjectCompact": {
-    "description": "A *project* represents a prioritized list of tasks in Asana or a board with columns of tasks represented as cards. It exists in a single workspace or organization and is accessible to a subset of users in that workspace or organization, depending on its permissions.",
-    "type": "object",
-    "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
-        "type": "string",
-        "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
-      },
-      "resource_type": {
-        "description": "The base type of this resource.",
-        "type": "string",
-        "readOnly": true,
-        "example": "project",
-        "x-insert-after": "gid"
-      },
-      "name": {
-        "description": "Name of the project. This is generally a short sentence fragment that fits on a line in the UI for maximum readability. However, it can be longer.",
-        "type": "string",
-        "example": "Stuff to buy"
-      }
-    }
   },
   "ProjectDuplicateRequest": {
     "type": "object",
@@ -1697,171 +1717,6 @@ accept.
         "example": true
       }
     }
-  },
-  "ProjectRequest": {
-    "allOf": [
-      {
-        "$ref": "#/schemas/ProjectBase"
-      },
-      {
-        "type": "object",
-        "properties": {
-          "custom_fields": {
-            "description": "An object where each key is the GID of a custom field and its corresponding value is either an enum GID, string, number, or object (depending on the custom field type). See the [custom fields guide](/docs/custom-fields-guide) for details on creating and updating custom field values.",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string",
-              "description": "\"{custom_field_gid}\" => Value (can be text, a number, etc.). For date, use format \"YYYY-MM-DD\" (e.g., 2019-09-15). For date-time, use ISO 8601 date string in UTC (e.g., 2019-09-15T02:06:58.147Z)."
-            },
-            "example": {
-              "5678904321": "On Hold",
-              "4578152156": "Not Started"
-            }
-          },
-          "followers": {
-            "description": "*Create-only*. Comma separated string of users. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
-            "type": "string",
-            "example": "12345,23456"
-          },
-          "owner": {
-            "description": "The current owner of the project, may be null.",
-            "nullable": true,
-            "type": "string",
-            "example": "12345"
-          },
-          "team": {
-            "description": "*Deprecated:* The team to share this project with is deprecated. Use `POST /memberships` with `{ parent: project, member: team }` to share a project with a team after creation.",
-            "deprecated": true,
-            "type": "string",
-            "example": "12345"
-          },
-          "workspace": {
-            "type": "string",
-            "description": "The `gid` of a workspace.",
-            "example": "12345"
-          }
-        }
-      }
-    ]
-  },
-  "ProjectResponse": {
-    "allOf": [
-      {
-        "$ref": "#/schemas/ProjectBase"
-      },
-      {
-        "type": "object",
-        "properties": {
-          "custom_fields": {
-            "description": "Array of custom field values applied directly to the project itself. These represent the values set on the project, not the fields available for tasks in the project.",
-            "readOnly": true,
-            "type": "array",
-            "items": {
-              "$ref": "#/schemas/CustomFieldCompact"
-            }
-          },
-          "completed": {
-            "description": "True if the project is currently marked complete, false if not.",
-            "type": "boolean",
-            "readOnly": true,
-            "example": false
-          },
-          "completed_at": {
-            "description": "The time at which this project was completed, or null if the project is not completed.",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true,
-            "nullable": true,
-            "example": "2012-02-22T02:06:58.147Z"
-          },
-          "completed_by": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/UserCompact"
-              },
-              {
-                "description": "The user that marked this project complete, or null if the project is not completed.",
-                "readOnly": true,
-                "nullable": true
-              }
-            ]
-          },
-          "followers": {
-            "description": "Array of users following this project. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
-            "type": "array",
-            "items": {
-              "$ref": "#/schemas/UserCompact"
-            },
-            "readOnly": true
-          },
-          "owner": {
-            "description": "The current owner of the project, may be null.",
-            "allOf": [
-              {
-                "$ref": "#/schemas/UserCompact"
-              },
-              {
-                "type": "object",
-                "nullable": true
-              }
-            ]
-          },
-          "team": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/TeamCompact"
-              },
-              {
-                "type": "object",
-                "description": "The team that this project is shared with."
-              }
-            ]
-          },
-          "permalink_url": {
-            "type": "string",
-            "readOnly": true,
-            "description": "A url that points directly to the object within Asana.",
-            "example": "https://app.asana.com/1/12345/project/123456789"
-          },
-          "project_brief": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/ProjectBriefCompact"
-              },
-              {
-                "type": "object",
-                "description": "[Opt In](/docs/inputoutput-options). The project brief associated with this project.",
-                "nullable": true
-              }
-            ]
-          },
-          "created_from_template": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/ProjectTemplateCompact"
-              },
-              {
-                "type": "object",
-                "description": "[Opt In](/docs/inputoutput-options). The project template from which this project was created. If the project was not created from a template, this field will be null.",
-                "nullable": true
-              }
-            ]
-          },
-          "workspace": {
-            "allOf": [
-              {
-                "$ref": "#/schemas/WorkspaceCompact"
-              },
-              {
-                "type": "object",
-                "readOnly": true,
-                "description": "*Create-only*. The workspace or organization this project is associated with. Once created, projects cannot be moved to a different workspace. This attribute can only be specified at creation time. If the workspace for your project is an organization, you must also supply a `team` in the request body."
-              }
-            ]
-          }
-        }
-      }
-    ]
   },
   "ProjectSaveAsTemplateRequest": {
     "type": "object",
@@ -2010,47 +1865,6 @@ accept.
       }
     }
   },
-  "ProjectUpdateRequest": {
-    "allOf": [
-      {
-        "$ref": "#/schemas/ProjectBase"
-      },
-      {
-        "type": "object",
-        "properties": {
-          "custom_fields": {
-            "description": "An object where each key is the GID of a custom field and its corresponding value is either an enum GID, string, number, or object (depending on the custom field type). See the [custom fields guide](/docs/custom-fields-guide) for details on creating and updating custom field values.",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string",
-              "description": "\"{custom_field_gid}\" => Value (can be text, a number, etc.). For date, use format \"YYYY-MM-DD\" (e.g., 2019-09-15). For date-time, use ISO 8601 date string in UTC (e.g., 2019-09-15T02:06:58.147Z)."
-            },
-            "example": {
-              "5678904321": "On Hold",
-              "4578152156": "Not Started"
-            }
-          },
-          "followers": {
-            "description": "*Create-only*. Comma separated string of users. Followers are a subset of members who have opted in to receive \"tasks added\" notifications for a project.",
-            "type": "string",
-            "example": "12345,23456"
-          },
-          "owner": {
-            "description": "The current owner of the project, may be null.",
-            "nullable": true,
-            "type": "string",
-            "example": "12345"
-          },
-          "team": {
-            "description": "*Deprecated:* Updating the team a project is shared with is deprecated. Use `POST /memberships` with `{ parent: project, member: team }` instead to manage team sharing.",
-            "deprecated": true,
-            "type": "string",
-            "example": "12345"
-          }
-        }
-      }
-    ]
-  },
   "RemoveCustomFieldSettingRequest": {
     "type": "object",
     "required": [
@@ -2129,42 +1943,6 @@ accept.
         "format": "date-time",
         "readOnly": true,
         "example": "2012-02-22T03:06:58.147Z"
-      }
-    }
-  },
-  "StatusUpdateCompact": {
-    "description": "A *status update* is an update on the progress of a particular project, portfolio, or goal, and is sent out to all of its parent's followers when created. These updates include both text describing the update and a `status_type` intended to represent the overall state of the object.",
-    "type": "object",
-    "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
-        "type": "string",
-        "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
-      },
-      "resource_type": {
-        "description": "The base type of this resource.",
-        "type": "string",
-        "readOnly": true,
-        "example": "status_update",
-        "x-insert-after": "gid"
-      },
-      "title": {
-        "description": "The title of the status update.",
-        "type": "string",
-        "example": "Status Update - Jun 15"
-      },
-      "resource_subtype": {
-        "type": "string",
-        "description": "The subtype of this resource. Different subtypes retain many of the same fields and behavior, but may render differently in Asana or represent resources with different semantic meaning.\nThe `resource_subtype`s for `status` objects represent the type of their parent.",
-        "enum": [
-          "project_status_update",
-          "portfolio_status_update",
-          "goal_status_update"
-        ],
-        "example": "project_status_update",
-        "readOnly": true
       }
     }
   },
@@ -2257,31 +2035,6 @@ accept.
       }
     }
   },
-  "TeamCompact": {
-    "description": "<p><strong style={{ color: \"#4573D2\" }}>Full object requires scope: </strong><code>teams:read</code></p>\n\nA *team* is used to group related projects and people together within an organization. Each project in an organization is associated with a team.",
-    "type": "object",
-    "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
-        "type": "string",
-        "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
-      },
-      "resource_type": {
-        "description": "The base type of this resource.",
-        "type": "string",
-        "readOnly": true,
-        "example": "team",
-        "x-insert-after": "gid"
-      },
-      "name": {
-        "description": "The name of the team.",
-        "type": "string",
-        "example": "Marketing"
-      }
-    }
-  },
   "UserCompact": {
     "description": "A *user* object represents an account in Asana that can be given access to various workspaces, projects, and tasks.",
     "type": "object",
@@ -2304,31 +2057,6 @@ accept.
         "type": "string",
         "description": "*Read-only except when same user as requester*. The user's name.",
         "example": "Greg Sanchez"
-      }
-    }
-  },
-  "WorkspaceCompact": {
-    "description": "A *workspace* is the highest-level organizational unit in Asana. All projects and tasks have an associated workspace.",
-    "type": "object",
-    "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
-        "type": "string",
-        "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
-      },
-      "resource_type": {
-        "description": "The base type of this resource.",
-        "type": "string",
-        "readOnly": true,
-        "example": "workspace",
-        "x-insert-after": "gid"
-      },
-      "name": {
-        "description": "The name of the workspace.",
-        "type": "string",
-        "example": "My Company Workspace"
       }
     }
   }
@@ -2389,7 +2117,7 @@ accept.
 - Insert Route entries **above** the `/{_unknown_path:path}` catch-all
 - Fixed paths before parameterized paths
 - Use `_session(request)`, `_principal_user_id(request)`, `_parse_json_body(request)`,
-- **Error responses**: Already implemented in `core/errors.py`: `bad_request()`, `unauthorized()`, `forbidden()`, `not_found()`, `handle_exception()`
+- **Error responses**: Already implemented in `core/errors.py`: `bad_request()`, `unauthorized()`, `payment_required()`, `forbidden()`, `not_found()`, `internal_server_error()`, `handle_exception()`
 
 For error codes not covered above, implement the response inline or add a new constructor to `core/errors.py`.
   `_pagination_params(request)` from the existing request helpers

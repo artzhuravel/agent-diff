@@ -58,6 +58,84 @@ asana_task_tag_association = Table(
 # Stub models — expanded when each resource is implemented
 # ---------------------------------------------------------------------------
 
+class AsanaGoal(Base):
+    __tablename__ = "asana_goals"
+    __table_args__ = (
+        Index("ix_asana_goals_workspace", "workspace_gid"),
+        Index("ix_asana_goals_team", "team_gid"),
+        Index("ix_asana_goals_owner", "owner_gid"),
+        Index("ix_asana_goals_parent_goal", "parent_goal_gid"),
+    )
+
+    # Identity
+    gid: Mapped[str] = mapped_column(String(50), primary_key=True)
+    resource_type: Mapped[str] = mapped_column(String(50), default="goal")
+    name: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # GoalBase fields
+    html_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    due_on: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    start_on: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_workspace_level: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    liked: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+
+    # GoalResponse fields
+    likes: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    num_likes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    privacy_setting: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    default_access_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Nested objects stored as JSONB
+    metric: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    current_status_update: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    custom_fields: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    custom_field_settings: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    followers: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+
+    # FK: owner → asana_users
+    owner_gid: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("asana_users.gid"), nullable=True
+    )
+    owner_ref: Mapped[Optional["AsanaUser"]] = relationship(
+        back_populates="owned_goals", foreign_keys=[owner_gid]
+    )
+
+    # FK: workspace → asana_workspaces
+    workspace_gid: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("asana_workspaces.gid"), nullable=True
+    )
+    workspace_ref: Mapped[Optional["AsanaWorkspace"]] = relationship(
+        back_populates="goals"
+    )
+
+    # FK: team → asana_teams
+    team_gid: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("asana_teams.gid"), nullable=True
+    )
+    team_ref: Mapped[Optional["AsanaTeam"]] = relationship(
+        back_populates="goals"
+    )
+
+    # Non-FK reference (time_period is not a modeled resource)
+    time_period_gid: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Self-referential FK: parent goal
+    parent_goal_gid: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("asana_goals.gid"), nullable=True
+    )
+    parent_goal: Mapped[Optional["AsanaGoal"]] = relationship(
+        remote_side=[gid], back_populates="subgoals"
+    )
+    subgoals: Mapped[list["AsanaGoal"]] = relationship(
+        back_populates="parent_goal"
+    )
+
+    # Soft-delete
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class AsanaTag(Base):
     __tablename__ = "asana_tags"
     __table_args__ = (
@@ -146,6 +224,9 @@ class AsanaTeam(Base):
     projects: Mapped[list["AsanaProject"]] = relationship(
         back_populates="team_ref"
     )
+    goals: Mapped[list["AsanaGoal"]] = relationship(
+        back_populates="team_ref"
+    )
 
     # M:N: users ↔ teams
     users: Mapped[list["AsanaUser"]] = relationship(
@@ -200,6 +281,11 @@ class AsanaUser(Base):
         secondary=asana_user_workspace_association, back_populates="users"
     )
 
+    # Incoming: goals reference users via owner
+    owned_goals: Mapped[list["AsanaGoal"]] = relationship(
+        back_populates="owner_ref", foreign_keys="AsanaGoal.owner_gid"
+    )
+
     # Incoming: stories reference users via created_by, assignee, follower
     created_stories: Mapped[list["AsanaStory"]] = relationship(
         back_populates="created_by_ref", foreign_keys="AsanaStory.created_by_gid"
@@ -238,6 +324,9 @@ class AsanaWorkspace(Base):
     )
     teams: Mapped[list["AsanaTeam"]] = relationship(
         back_populates="organization_ref"
+    )
+    goals: Mapped[list["AsanaGoal"]] = relationship(
+        back_populates="workspace_ref"
     )
 
     # M:N: users ↔ workspaces

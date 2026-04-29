@@ -10,6 +10,7 @@ import yaml
 from pipeline.config import PipelineConfig, load_config
 from pipeline.extraction.endpoint_references import (
     EndpointReferences,
+    Reference,
     find_endpoint_references,
 )
 
@@ -26,6 +27,11 @@ def _config(tmp_path: Path, resources: dict[str, Any]) -> PipelineConfig:
         "resources": resources,
     }))
     return load_config(cfg_path)
+
+
+def _by_kind(refs: list[Reference], *kinds: str) -> list[Reference]:
+    """Filter a unified reference list by one or more ``kind`` discriminators."""
+    return [reference for reference in refs if reference.kind in kinds]
 
 
 def test_subject_inference_rightmost_alias(tmp_path: Path) -> None:
@@ -103,9 +109,15 @@ def test_path_and_parameter_references_populated(tmp_path: Path) -> None:
         },
     }
     result = find_endpoint_references("get", "/repos/{repo}", spec, config, {})
-    path_resources = {reference.resource for reference in result.path_references}
+    path_resources = {
+        reference.resource
+        for reference in _by_kind(result.references, "url_segment", "path_parameter")
+    }
     assert path_resources == {"repos"}
-    parameter_resources = {reference.resource for reference in result.parameter_references}
+    parameter_resources = {
+        reference.resource
+        for reference in _by_kind(result.references, "query", "header", "cookie")
+    }
     assert parameter_resources == {"users"}
     assert result.subject == "repos"
 
@@ -142,9 +154,10 @@ def test_body_references_from_request_and_response(tmp_path: Path) -> None:
     }
     bindings = {"IssueCreate": "issues", "Issue": "issues"}
     result = find_endpoint_references("post", "/issues", spec, config, bindings)
-    roles = {reference.role for reference in result.body_references}
-    assert roles == {"request", "response"}
-    assert all(reference.resource == "issues" for reference in result.body_references)
+    body_refs = _by_kind(result.references, "body_request", "body_response")
+    kinds = {reference.kind for reference in body_refs}
+    assert kinds == {"body_request", "body_response"}
+    assert all(reference.resource == "issues" for reference in body_refs)
 
 
 def test_property_references_walked_from_inline_body(tmp_path: Path) -> None:
@@ -173,15 +186,13 @@ def test_property_references_walked_from_inline_body(tmp_path: Path) -> None:
         },
     }
     result = find_endpoint_references("post", "/issues", spec, config, {})
-    resources = {reference.resource for reference in result.property_references}
+    property_refs = _by_kind(result.references, "property")
+    resources = {reference.resource for reference in property_refs}
     assert "users" in resources
 
 
 def test_missing_operation_returns_empty_record(tmp_path: Path) -> None:
     config = _config(tmp_path, {"users": {"aliases": ["user"]}})
     result = find_endpoint_references("get", "/missing", {}, config, {})
-    assert result.path_references == []
-    assert result.parameter_references == []
-    assert result.body_references == []
-    assert result.property_references == []
+    assert result.references == []
     assert result.subject is None

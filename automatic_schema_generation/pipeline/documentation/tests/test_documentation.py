@@ -67,10 +67,9 @@ def test_single_endpoint_entry_shape(tmp_path: Path) -> None:
     assert entry["responses"] == {"200": {"description": "ok"}}
     assert "references" in entry
     references = entry["references"]
-    assert "path" in references
-    assert "parameters" in references
-    assert "body" in references
-    assert "property" in references
+    # Flat list of unified Reference records, discriminated by ``kind``.
+    assert isinstance(references, list)
+    assert all({"resource", "kind", "location"} <= reference.keys() for reference in references)
 
 
 def test_transitive_schema_closure(tmp_path: Path) -> None:
@@ -213,7 +212,7 @@ def test_references_populated_from_walkers(tmp_path: Path) -> None:
     }
     document = generate_endpoints_document(spec, config)
     entry = document["endpoints"]["POST /issues"]
-    property_refs = entry["references"]["property"]
+    property_refs = [r for r in entry["references"] if r["kind"] == "property"]
     resources = {reference["resource"] for reference in property_refs}
     assert "users" in resources
 

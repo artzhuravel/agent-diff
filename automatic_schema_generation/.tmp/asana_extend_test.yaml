@@ -1,7 +1,7 @@
 app_slug: asana
 app_name: Asana
-openapi_path: inputs/openapi.scoped.json
-target_dir: ../../../backend/src/services/asana
+openapi_path: /Users/azh/agent-diff/automatic_schema_generation/apps/asana/inputs/openapi.scoped.json
+target_dir: /Users/azh/agent-diff/backend/src/services/asana
 resources:
   tasks:
     aliases:
@@ -111,25 +111,6 @@ resources:
     primary_key: gid
     self_id_fields:
     - gid
-  goals:
-    aliases:
-    - goal
-    - goals
-    - goal_compact
-    - goal_request
-    - goal_response
-    - goal_metric
-    - goal_metric_base
-    - goal_membership
-    primary_key: gid
-    self_id_fields:
-    - gid
-selected_endpoints:
-- "POST /goals"
-- "GET /goals"
-- "GET /goals/{goal_gid}"
-- "DELETE /goals/{goal_gid}"
-- "POST /goals/{goal_gid}/addFollowers"
 naming:
   qualifier_prefixes:
   - parent_
@@ -139,3 +120,8 @@ naming:
   - gid
   self_id_fields:
   - gid
+selected_endpoints:
+- "POST /tasks"
+- "GET /tasks/{task_gid}"
+- "POST /tasks/{task_gid}/madeUpEndpoint"
+- "GET /access_requests"

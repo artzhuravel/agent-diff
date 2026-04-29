@@ -228279,7 +228279,7 @@
                             "type": "string",
                             "format": "uri"
                           },
-                          "type": {
+                          "type": {a
                             "type": "string",
                             "enum": [
                               "Bot",

@@ -47,6 +47,44 @@ def test_non_matching_schema_name_does_not_bind(tmp_path: Path) -> None:
     assert build_schema_bindings(spec, config) == {}
 
 
+def test_title_rescues_opaque_schema_name(tmp_path: Path) -> None:
+    """D2: a schema whose name doesn't match aliases binds via its ``title``.
+
+    Useful for specs that use generated names (``webhook_payload_42``) but
+    populate human-readable titles.
+    """
+    config = _config(tmp_path, {"users": {"aliases": ["user"]}})
+    spec = {
+        "components": {
+            "schemas": {
+                "webhook_payload_42": {"type": "object", "title": "User"},
+            },
+        },
+    }
+    assert build_schema_bindings(spec, config) == {"webhook_payload_42": "users"}
+
+
+def test_d1_name_match_takes_precedence_over_d2_title(tmp_path: Path) -> None:
+    """If D1 already bound the schema, D2 doesn't override it."""
+    config = _config(
+        tmp_path,
+        {
+            "users": {"aliases": ["user", "simple_user"]},
+            "repos": {"aliases": ["repo"]},
+        },
+    )
+    spec = {
+        "components": {
+            "schemas": {
+                "SimpleUser": {"type": "object", "title": "Repo"},
+            },
+        },
+    }
+    # Name → users (D1 wins). Title would have said repos, but D2 only fires
+    # for schemas D1 missed.
+    assert build_schema_bindings(spec, config) == {"SimpleUser": "users"}
+
+
 def test_all_of_inherits_binding_from_ref_branch(tmp_path: Path) -> None:
     """``Issue`` composes over ``BaseIssue`` which itself hits ``issues``."""
     config = _config(tmp_path, {"issues": {"aliases": ["issue", "base_issue"]}})

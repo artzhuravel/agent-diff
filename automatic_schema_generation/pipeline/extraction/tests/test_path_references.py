@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 from pipeline.config import PipelineConfig, load_config
-from pipeline.extraction.endpoint_references import PathReference, find_path_references
+from pipeline.extraction.endpoint_references import Reference, find_path_references
 
 
 def _config(tmp_path: Path, resources: dict[str, Any]) -> PipelineConfig:
@@ -56,7 +56,7 @@ def test_path_parameter_compound_form_hits(tmp_path: Path) -> None:
         },
         config,
     )
-    sources = {(reference.resource, reference.source) for reference in references}
+    sources = {(reference.resource, reference.kind) for reference in references}
     assert ("repos", "url_segment") in sources
     assert ("repos", "path_parameter") in sources
 
@@ -76,7 +76,7 @@ def test_operation_level_parameter_walks(tmp_path: Path) -> None:
         config,
     )
     assert any(
-        reference.resource == "users" and reference.source == "path_parameter"
+        reference.resource == "users" and reference.kind == "path_parameter"
         for reference in references
     )
 
@@ -126,7 +126,7 @@ def test_duplicate_parameter_declarations_dedup(tmp_path: Path) -> None:
         config,
     )
     entries = [
-        (reference.token, reference.resource, reference.source)
+        (reference.location, reference.resource, reference.kind)
         for reference in references
     ]
     assert ("repo", "repos", "url_segment") in entries

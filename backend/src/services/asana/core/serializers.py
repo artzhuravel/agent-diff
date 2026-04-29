@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..database.schema import AsanaProject, AsanaSection, AsanaStory, AsanaTag, AsanaTask, AsanaTeam, AsanaUser, AsanaWorkspace
+from ..database.schema import AsanaGoal, AsanaProject, AsanaSection, AsanaStory, AsanaTag, AsanaTask, AsanaTeam, AsanaUser, AsanaWorkspace
 
 
 def _compact_or_none(ref_obj, resource_type: str) -> Optional[dict[str, Any]]:
@@ -489,6 +489,64 @@ def serialize_story_list(
     """Paginated collection envelope."""
     result: dict[str, Any] = {
         "data": [serialize_story_compact(story) for story in stories],
+    }
+    if next_cursor is not None:
+        result["next_page"] = {"offset": next_cursor}
+    else:
+        result["next_page"] = None
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Goals
+# ---------------------------------------------------------------------------
+
+def serialize_goal(goal: AsanaGoal) -> dict[str, Any]:
+    """Full GoalResponse shape."""
+    return {
+        "gid": goal.gid,
+        "resource_type": goal.resource_type or "goal",
+        "name": goal.name,
+        "html_notes": goal.html_notes,
+        "notes": goal.notes,
+        "due_on": goal.due_on,
+        "start_on": goal.start_on,
+        "is_workspace_level": goal.is_workspace_level,
+        "liked": goal.liked,
+        "likes": goal.likes or [],
+        "num_likes": goal.num_likes or 0,
+        "status": goal.status,
+        "privacy_setting": goal.privacy_setting,
+        "default_access_level": goal.default_access_level,
+        "metric": goal.metric,
+        "current_status_update": goal.current_status_update,
+        "custom_fields": goal.custom_fields or [],
+        "custom_field_settings": goal.custom_field_settings or [],
+        "followers": goal.followers or [],
+        "owner": _compact_or_none(goal.owner_ref, "user") if hasattr(goal, "owner_ref") and goal.owner_ref else _gid_compact(goal.owner_gid, "user"),
+        "workspace": _compact_or_none(goal.workspace_ref, "workspace") if hasattr(goal, "workspace_ref") and goal.workspace_ref else _gid_compact(goal.workspace_gid, "workspace"),
+        "team": _compact_or_none(goal.team_ref, "team") if hasattr(goal, "team_ref") and goal.team_ref else _gid_compact(goal.team_gid, "team"),
+        "time_period": _gid_compact(goal.time_period_gid, "time_period"),
+    }
+
+
+def serialize_goal_compact(goal: AsanaGoal) -> dict[str, Any]:
+    """GoalCompact shape for collection endpoints."""
+    return {
+        "gid": goal.gid,
+        "resource_type": goal.resource_type or "goal",
+        "name": goal.name,
+        "owner": _compact_or_none(goal.owner_ref, "user") if hasattr(goal, "owner_ref") and goal.owner_ref else _gid_compact(goal.owner_gid, "user"),
+    }
+
+
+def serialize_goal_list(
+    goals: list[AsanaGoal],
+    next_cursor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Paginated collection envelope."""
+    result: dict[str, Any] = {
+        "data": [serialize_goal_compact(goal) for goal in goals],
     }
     if next_cursor is not None:
         result["next_page"] = {"offset": next_cursor}

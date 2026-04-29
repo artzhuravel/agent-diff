@@ -77,6 +77,11 @@ class PipelineConfig:
     resources: ResourcesConfig
     naming: NamingConfig
     config_path: Path
+    # Optional ``"METHOD /path"`` strings; the implement stage emits
+    # handlers only for these. Empty tuple = default endpoint-centric
+    # mode (the implement stage will refuse to run unless
+    # --all-endpoints-per-resource is also set).
+    selected_endpoints: tuple[str, ...] = ()
 
     def load_spec(self) -> dict:
         """Read and parse the OpenAPI spec JSON pointed at by ``openapi_path``."""
@@ -231,6 +236,8 @@ def load_config(config_path: Path) -> PipelineConfig:
         primary_keys_lookup=MappingProxyType(primary_keys_lookup),
     )
 
+    selected_endpoints = _parse_selected_endpoints(raw.get("selected_endpoints"))
+
     return PipelineConfig(
         app_slug=app_slug,
         app_name=app_name,
@@ -239,6 +246,7 @@ def load_config(config_path: Path) -> PipelineConfig:
         resources=resources,
         naming=naming,
         config_path=config_path,
+        selected_endpoints=selected_endpoints,
     )
 
 
@@ -255,6 +263,43 @@ def _require_string(raw: dict[str, Any], key: str) -> str:
             f"app_config '{key}' must be a non-empty string, got {value!r}"
         )
     return value
+
+
+_VALID_HTTP_METHODS = frozenset({
+    "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE",
+})
+
+
+def _parse_selected_endpoints(raw: Any) -> tuple[str, ...]:
+    """Validate the optional ``selected_endpoints`` list shape.
+
+    Each entry must be ``"METHOD /path"`` (uppercase method, single
+    space, leading slash). Empty / missing means "no selection" — the
+    implement stage decides what to do with that.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(
+            f"app_config 'selected_endpoints' must be a list of "
+            f"\"METHOD /path\" strings, got {type(raw).__name__}"
+        )
+    out: list[str] = []
+    for entry in raw:
+        if not isinstance(entry, str):
+            raise ValueError(
+                f"app_config 'selected_endpoints' entries must be strings, "
+                f"got {type(entry).__name__}: {entry!r}"
+            )
+        parts = entry.strip().split(" ", 1)
+        if len(parts) != 2 or parts[0] not in _VALID_HTTP_METHODS or not parts[1].startswith("/"):
+            raise ValueError(
+                f"app_config 'selected_endpoints' entry {entry!r} must be "
+                f"\"METHOD /path\" (uppercase method, leading slash on path)"
+            )
+        # Normalise to single-space form
+        out.append(f"{parts[0]} {parts[1]}")
+    return tuple(out)
 
 
 def _as_string_tuple(

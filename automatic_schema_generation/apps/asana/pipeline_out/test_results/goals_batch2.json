@@ -1,0 +1,87 @@
+{
+  "results": [
+    {
+      "method": "GET",
+      "path": "/goals/{goal_gid}/custom_field_settings",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Returns custom field settings array for a goal with next_page; returns 404 with error envelope for nonexistent goal. Required fix to addCustomFieldSetting to store properly shaped settings (gid, resource_type, custom_field as object).",
+      "curl_examples": [
+        "curl -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>/custom_field_settings"
+      ],
+      "code_changes": [
+        {"file": "backend/src/services/asana/api/routes.py", "summary": "Rewrote add_custom_field_setting_to_goal to build proper CustomFieldSettingResponse objects with gid, resource_type, custom_field, parent, and is_important; added flag_modified call"}
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/setMetric",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Sets metric JSONB on goal and returns full GoalResponse with metric populated; returns 404 for nonexistent goal.",
+      "curl_examples": [
+        "curl -X POST -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>/setMetric -d '{\"data\": {\"resource_subtype\": \"number\", \"precision\": 2, \"unit\": \"currency\", \"currency_code\": \"USD\", \"initial_number_value\": 0, \"target_number_value\": 100, \"current_number_value\": 50, \"progress_source\": \"manual\"}}'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/setMetricCurrentValue",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Updates current_number_value in existing metric JSONB and returns GoalResponse; returns 404 for nonexistent goal.",
+      "curl_examples": [
+        "curl -X POST -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>/setMetricCurrentValue -d '{\"data\": {\"current_number_value\": 75.5}}'"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/addCustomFieldSetting",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Adds a custom field setting with proper CustomFieldSettingResponse shape (gid, resource_type, custom_field object, parent, is_important); returns 404 for nonexistent goal. Original implementation echoed raw request data without proper structure.",
+      "curl_examples": [
+        "curl -X POST -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>/addCustomFieldSetting -d '{\"data\": {\"custom_field\": \"cf-123\", \"is_important\": true}}'"
+      ],
+      "code_changes": [
+        {"file": "backend/src/services/asana/api/routes.py", "summary": "Rewrote add_custom_field_setting_to_goal to build proper CustomFieldSettingResponse objects with gid, resource_type, custom_field as nested object, parent, and is_important; added flag_modified call"}
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/goals/{goal_gid}/removeCustomFieldSetting",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Removes custom field setting by custom_field gid and returns empty data object; returns 404 for nonexistent goal. Fixed to add flag_modified and validate custom_field input.",
+      "curl_examples": [
+        "curl -X POST -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>/removeCustomFieldSetting -d '{\"data\": {\"custom_field\": \"cf-123\"}}'"
+      ],
+      "code_changes": [
+        {"file": "backend/src/services/asana/api/routes.py", "summary": "Fixed remove_custom_field_setting_from_goal to validate custom_field input, use flag_modified, and match on setting.get('custom_field', {}).get('gid')"}
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/goals/{goal_gid}",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Returns full GoalResponse with all fields (name, notes, metric, custom_fields, followers, workspace, etc.); returns 404 with error envelope for nonexistent goal.",
+      "curl_examples": [
+        "curl -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid>"
+      ],
+      "code_changes": []
+    },
+    {
+      "method": "PUT",
+      "path": "/goals/{goal_gid}",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "Updates goal fields (name, notes, due_on, etc.) and returns updated GoalResponse; returns 404 with error envelope for nonexistent goal.",
+      "curl_examples": [
+        "curl -X PUT -H 'Content-Type: application/json' -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV/services/asana/goals/<goal_gid> -d '{\"data\": {\"name\": \"Updated Goal\", \"notes\": \"Updated notes\"}}'"
+      ],
+      "code_changes": []
+    }
+  ]
+}

@@ -57,6 +57,12 @@ class RunContext:
     test_max_iterations: int = 3
     test_force_retest: bool = False
     test_timeout: int = 1800
+    # When False (default), the implement stage refuses to run unless
+    # ``app.yaml`` lists ``selected_endpoints``. When True, every
+    # endpoint of every resource in app.yaml is implemented (the old
+    # resource-centric behaviour). Off by default because implementing
+    # whole apps in one go is expensive in LLM tokens.
+    all_endpoints_per_resource: bool = False
 
     @property
     def output_dir(self) -> Path:
@@ -133,6 +139,15 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--test-max-iterations", type=int, default=RunContext.test_max_iterations, help="Fix-and-retry budget per endpoint")
     parser.add_argument("--test-timeout", type=int, default=RunContext.test_timeout, help="Per-batch claude -p timeout in seconds")
     parser.add_argument("--force-retest", action="store_true", help="Test endpoints already marked tested=true (regression sweep)")
+    parser.add_argument(
+        "--all-endpoints-per-resource",
+        action="store_true",
+        help=(
+            "Implement every endpoint of each resource listed in app.yaml. "
+            "Without this flag the implement stage requires a `selected_endpoints` "
+            "list in app.yaml and only implements those entries."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
@@ -156,6 +171,7 @@ def main(argv: list[str] | None = None) -> None:
         test_max_iterations=args.test_max_iterations,
         test_force_retest=args.force_retest,
         test_timeout=args.test_timeout,
+        all_endpoints_per_resource=args.all_endpoints_per_resource,
     )
     run_pipeline(ctx, stages)
 

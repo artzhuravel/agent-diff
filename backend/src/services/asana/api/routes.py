@@ -27,6 +27,9 @@ from ..core.errors import (
     unauthorized,
 )
 from ..core.serializers import (
+    serialize_goal,
+    serialize_goal_compact,
+    serialize_goal_list,
     serialize_project,
     serialize_project_compact,
     serialize_project_list,
@@ -2037,6 +2040,373 @@ async def create_time_tracking_entry_for_task(request: Request) -> JSONResponse:
 
 
 # ---------------------------------------------------------------------------
+# Goals
+# ---------------------------------------------------------------------------
+
+
+async def create_goal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        goal = ops.create_goal(session, data)
+        return JSONResponse({"data": serialize_goal(goal)}, status_code=status.HTTP_201_CREATED)
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def get_goals(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        cursor, limit = _pagination_params(request)
+        workspace = request.query_params.get("workspace")
+        team_param = request.query_params.get("team")
+        project_param = request.query_params.get("project")
+        portfolio_param = request.query_params.get("portfolio")
+        task_param = request.query_params.get("task")
+        is_workspace_level_param = request.query_params.get("is_workspace_level")
+        is_workspace_level = None
+        if is_workspace_level_param is not None:
+            is_workspace_level = is_workspace_level_param.lower() == "true"
+        time_periods_param = request.query_params.getlist("time_periods")
+        goals, next_cursor = ops.list_goals(
+            session,
+            workspace=workspace,
+            team=team_param,
+            project=project_param,
+            portfolio=portfolio_param,
+            task=task_param,
+            is_workspace_level=is_workspace_level,
+            time_periods=time_periods_param or None,
+            cursor=cursor,
+            limit=limit,
+        )
+        return JSONResponse(serialize_goal_list(goals, next_cursor))
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def get_goal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def update_goal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        goal = ops.update_goal(session, goal_gid, data)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def delete_goal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        deleted = ops.delete_goal(session, goal_gid)
+        if not deleted:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": {}})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def add_followers_to_goal(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        follower_gids = data.get("followers", [])
+        if not follower_gids:
+            raise bad_request("followers: Missing input")
+        goal = ops.add_goal_followers(session, goal_gid, follower_gids)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def remove_followers_from_goal(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        follower_gids = data.get("followers", [])
+        if not follower_gids:
+            raise bad_request("followers: Missing input")
+        goal = ops.remove_goal_followers(session, goal_gid, follower_gids)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def get_parent_goals(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        cursor, limit = _pagination_params(request)
+        goals, next_cursor = ops.list_parent_goals(
+            session, goal_gid, cursor=cursor, limit=limit,
+        )
+        return JSONResponse(serialize_goal_list(goals, next_cursor))
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def add_subgoal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        subgoal_gid = data.get("subgoal")
+        if not subgoal_gid:
+            raise bad_request("subgoal: Missing input")
+        subgoal = ops.add_subgoal(session, goal_gid, subgoal_gid)
+        if subgoal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": {}})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def remove_subgoal_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        subgoal_gid = data.get("subgoal")
+        if not subgoal_gid:
+            raise bad_request("subgoal: Missing input")
+        subgoal = ops.remove_subgoal(session, goal_gid, subgoal_gid)
+        if subgoal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": {}})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def add_supporting_relationship_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        supporting_resource_gid = data.get("supporting_resource")
+        if not supporting_resource_gid:
+            raise bad_request("supporting_resource: Missing input")
+        contribution_weight = data.get("contribution_weight", 0)
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        # If the supporting resource is a goal, set parent relationship
+        supporting_goal = ops.get_goal(session, supporting_resource_gid)
+        if supporting_goal is not None:
+            supporting_goal.parent_goal_gid = goal_gid
+            session.flush()
+            resource_subtype = "subgoal"
+            supporting_compact = {
+                "gid": supporting_goal.gid,
+                "resource_type": "goal",
+                "name": supporting_goal.name,
+            }
+        else:
+            resource_subtype = "supporting_work"
+            supporting_compact = {
+                "gid": supporting_resource_gid,
+                "resource_type": "project",
+                "name": None,
+            }
+        relationship = {
+            "gid": ops.generate_id("goal_relationship"),
+            "resource_type": "goal_relationship",
+            "resource_subtype": resource_subtype,
+            "supporting_resource": supporting_compact,
+            "contribution_weight": contribution_weight,
+            "supported_goal": serialize_goal_compact(goal),
+        }
+        return JSONResponse({"data": relationship})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def remove_supporting_relationship_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        supporting_resource_gid = data.get("supporting_resource")
+        if not supporting_resource_gid:
+            raise bad_request("supporting_resource: Missing input")
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        # If the supporting resource is a goal, clear the parent relationship
+        supporting_goal = ops.get_goal(session, supporting_resource_gid)
+        if supporting_goal is not None and supporting_goal.parent_goal_gid == goal_gid:
+            supporting_goal.parent_goal_gid = None
+            session.flush()
+        return JSONResponse({"data": {}})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def get_goal_custom_field_settings(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": goal.custom_field_settings or [], "next_page": None})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def set_goal_metric_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        goal = ops.update_goal(session, goal_gid, {"metric": data})
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def set_goal_metric_current_value_handler(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        # Update the current_number_value in the metric JSONB
+        metric = dict(goal.metric or {})
+        if "current_number_value" in data:
+            metric["current_number_value"] = data["current_number_value"]
+        goal.metric = metric
+        session.flush()
+        return JSONResponse({"data": serialize_goal(goal)})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def add_custom_field_setting_to_goal(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        custom_field = data.get("custom_field")
+        if not custom_field:
+            raise bad_request("custom_field: Missing input")
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        is_important = data.get("is_important", False)
+        custom_field_gid = custom_field if isinstance(custom_field, str) else custom_field.get("gid", "")
+        setting = {
+            "gid": ops.generate_id("goal"),
+            "resource_type": "custom_field_setting",
+            "is_important": is_important,
+            "custom_field": {"gid": custom_field_gid, "resource_type": "custom_field"},
+            "parent": {"gid": goal.gid, "resource_type": "goal", "name": goal.name},
+        }
+        settings = list(goal.custom_field_settings or [])
+        settings.append(setting)
+        goal.custom_field_settings = settings
+        flag_modified(goal, "custom_field_settings")
+        session.flush()
+        return JSONResponse({"data": setting})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def remove_custom_field_setting_from_goal(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        goal_gid = request.path_params["goal_gid"]
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        custom_field_gid = data.get("custom_field")
+        if not custom_field_gid:
+            raise bad_request("custom_field: Missing input")
+        goal = ops.get_goal(session, goal_gid)
+        if goal is None:
+            raise not_found(f"goal: Unknown object: {goal_gid}")
+        settings = goal.custom_field_settings or []
+        goal.custom_field_settings = [
+            setting for setting in settings
+            if setting.get("custom_field", {}).get("gid") != custom_field_gid
+        ]
+        flag_modified(goal, "custom_field_settings")
+        session.flush()
+        return JSONResponse({"data": {}})
+    except AppAPIError as error:
+        return error.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+# ---------------------------------------------------------------------------
 # Workspaces
 # ---------------------------------------------------------------------------
 
@@ -2321,6 +2691,25 @@ routes: list[Route] = [
     Route("/user_task_lists/{user_task_list_gid}/tasks", get_tasks_for_user_task_list, methods=["GET"]),
     Route("/workspaces/{workspace_gid}/tasks/custom_id/{custom_id}", get_task_by_custom_id, methods=["GET"]),
     Route("/workspaces/{workspace_gid}/tasks/search", search_tasks_in_workspace, methods=["GET"]),
+
+    # --- Goals ---
+    Route("/goals", create_goal_handler, methods=["POST"]),
+    Route("/goals", get_goals, methods=["GET"]),
+    Route("/goals/{goal_gid}/addFollowers", add_followers_to_goal, methods=["POST"]),
+    Route("/goals/{goal_gid}/removeFollowers", remove_followers_from_goal, methods=["POST"]),
+    Route("/goals/{goal_gid}/parentGoals", get_parent_goals, methods=["GET"]),
+    Route("/goals/{goal_gid}/addSubgoal", add_subgoal_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/removeSubgoal", remove_subgoal_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/addSupportingRelationship", add_supporting_relationship_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/removeSupportingRelationship", remove_supporting_relationship_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/custom_field_settings", get_goal_custom_field_settings, methods=["GET"]),
+    Route("/goals/{goal_gid}/setMetric", set_goal_metric_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/setMetricCurrentValue", set_goal_metric_current_value_handler, methods=["POST"]),
+    Route("/goals/{goal_gid}/addCustomFieldSetting", add_custom_field_setting_to_goal, methods=["POST"]),
+    Route("/goals/{goal_gid}/removeCustomFieldSetting", remove_custom_field_setting_from_goal, methods=["POST"]),
+    Route("/goals/{goal_gid}", get_goal_handler, methods=["GET"]),
+    Route("/goals/{goal_gid}", update_goal_handler, methods=["PUT"]),
+    Route("/goals/{goal_gid}", delete_goal_handler, methods=["DELETE"]),
 
     # --- Workspaces ---
     Route("/workspaces", get_workspaces, methods=["GET"]),

@@ -47,6 +47,32 @@ def run_register_tests(ctx) -> None:
         endpoints_doc = json.loads(endpoints_path.read_text())
         registry = build_test_registry(implemented, endpoints_doc, config.app_slug)
 
+        # Preserve tested status from a prior registry. Entries that share
+        # ``(method, path)`` with a previously-tested entry keep their
+        # ``tested`` flag + ``test_result``, so re-running register_tests
+        # after an extend exercises only the newly added endpoints. The
+        # ``--force-retest`` flag opts out — every entry is left untested
+        # so the next test_endpoints run sweeps the full surface.
+        registry_path = output_dir / "test_registry.json"
+        if not ctx.test_force_retest and registry_path.exists():
+            previous = json.loads(registry_path.read_text())
+            previous_by_key = {
+                (entry["method"], entry["path"]): entry
+                for entry in previous.get("endpoints") or []
+            }
+            preserved_count = 0
+            for entry in registry["endpoints"]:
+                prior = previous_by_key.get((entry["method"], entry["path"]))
+                if prior and prior.get("tested"):
+                    entry["tested"] = True
+                    entry["test_result"] = prior.get("test_result")
+                    preserved_count += 1
+            if preserved_count:
+                print(
+                    f"  Preserved tested status for {preserved_count} "
+                    f"endpoint(s) from previous registry"
+                )
+
         # Build implemented_endpoints doc — subset of endpoints.json
         endpoints_block = endpoints_doc.get("endpoints") or {}
         matched: dict[str, Any] = {}

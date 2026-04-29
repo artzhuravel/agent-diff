@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from ..core.utils import generate_id, now_iso
 from .schema import (
+    AsanaGoal,
     AsanaProject,
     AsanaSection,
     AsanaStory,
@@ -89,6 +90,13 @@ def _ensure_story_stub(session: Session, gid: str) -> None:
     """Create a minimal story row if it doesn't exist yet."""
     if gid and not session.get(AsanaStory, gid):
         session.add(AsanaStory(gid=gid, resource_type="story", is_deleted=False))
+        session.flush()
+
+
+def _ensure_goal_stub(session: Session, gid: str) -> None:
+    """Create a minimal goal row if it doesn't exist yet."""
+    if gid and not session.get(AsanaGoal, gid):
+        session.add(AsanaGoal(gid=gid, resource_type="goal", is_deleted=False))
         session.flush()
 
 
@@ -1619,3 +1627,220 @@ def get_time_tracking_entries(session: Session, task_gid: str) -> Optional[list]
     if task is None:
         return None
     return _get_time_tracking_raw(session, task_gid)
+
+
+# ---------------------------------------------------------------------------
+# Goals
+# ---------------------------------------------------------------------------
+
+_GOAL_WRITABLE_FIELDS = [
+    "name", "html_notes", "notes", "due_on", "start_on",
+    "is_workspace_level", "liked", "status", "privacy_setting",
+    "default_access_level",
+]
+
+
+_GOAL_FK_FIELDS = {
+    "owner": ("owner_gid", _ensure_user_stub),
+    "workspace": ("workspace_gid", _ensure_workspace_stub),
+    "team": ("team_gid", _ensure_team_stub),
+}
+
+
+def _apply_goal_data(session: Session, goal: AsanaGoal, data: dict) -> None:
+    """Apply writable fields and reference fields from a data dict to a goal."""
+    for field in _GOAL_WRITABLE_FIELDS:
+        if field in data:
+            setattr(goal, field, data[field])
+
+    # FK reference fields
+    for api_name, (column_name, ensure_fn) in _GOAL_FK_FIELDS.items():
+        if api_name in data:
+            value = _extract_gid(data[api_name])
+            if value:
+                ensure_fn(session, value)
+            setattr(goal, column_name, value)
+
+    # Non-FK reference
+    if "time_period" in data:
+        goal.time_period_gid = _extract_gid(data["time_period"])
+
+    # JSONB fields
+    if "metric" in data:
+        goal.metric = data["metric"]
+    if "custom_fields" in data:
+        goal.custom_fields = data["custom_fields"]
+    if "custom_field_settings" in data:
+        goal.custom_field_settings = data["custom_field_settings"]
+
+    # Followers stored as JSONB array of compact user objects
+    if "followers" in data:
+        raw_followers = data["followers"]
+        if isinstance(raw_followers, list):
+            goal.followers = [
+                {"gid": follower, "resource_type": "user"} if isinstance(follower, str) else follower
+                for follower in raw_followers
+            ]
+
+
+def create_goal(session: Session, data: dict) -> AsanaGoal:
+    gid = generate_id("goal")
+    goal = AsanaGoal(
+        gid=gid,
+        resource_type="goal",
+        liked=False,
+        likes=[],
+        num_likes=0,
+        followers=[],
+        is_deleted=False,
+    )
+    _apply_goal_data(session, goal, data)
+    session.add(goal)
+    session.flush()
+    return goal
+
+
+def get_goal(session: Session, goal_gid: str) -> Optional[AsanaGoal]:
+    return session.execute(
+        select(AsanaGoal)
+        .options(
+            joinedload(AsanaGoal.owner_ref),
+            joinedload(AsanaGoal.workspace_ref),
+            joinedload(AsanaGoal.team_ref),
+        )
+        .where(
+            AsanaGoal.gid == goal_gid,
+            AsanaGoal.is_deleted.is_(False),
+        )
+    ).scalars().first()
+
+
+def update_goal(session: Session, goal_gid: str, data: dict) -> Optional[AsanaGoal]:
+    goal = get_goal(session, goal_gid)
+    if goal is None:
+        return None
+    _apply_goal_data(session, goal, data)
+    session.flush()
+    return goal
+
+
+def delete_goal(session: Session, goal_gid: str) -> bool:
+    goal = get_goal(session, goal_gid)
+    if goal is None:
+        return False
+    goal.is_deleted = True
+    session.flush()
+    return True
+
+
+def list_goals(
+    session: Session,
+    *,
+    workspace: Optional[str] = None,
+    team: Optional[str] = None,
+    project: Optional[str] = None,
+    portfolio: Optional[str] = None,
+    task: Optional[str] = None,
+    is_workspace_level: Optional[bool] = None,
+    time_periods: Optional[list[str]] = None,
+    cursor: Optional[str] = None,
+    limit: int = 50,
+) -> tuple[list[AsanaGoal], Optional[str]]:
+    query = select(AsanaGoal).where(AsanaGoal.is_deleted.is_(False))
+    if workspace is not None:
+        query = query.where(AsanaGoal.workspace_gid == workspace)
+    if team is not None:
+        query = query.where(AsanaGoal.team_gid == team)
+    if is_workspace_level is not None:
+        query = query.where(AsanaGoal.is_workspace_level == is_workspace_level)
+    if time_periods:
+        query = query.where(AsanaGoal.time_period_gid.in_(time_periods))
+    if cursor is not None:
+        query = query.where(AsanaGoal.gid > cursor)
+    query = query.order_by(AsanaGoal.gid).limit(limit + 1)
+    rows = list(session.execute(query).scalars().all())
+    if len(rows) > limit:
+        next_cursor = rows[limit - 1].gid
+        rows = rows[:limit]
+    else:
+        next_cursor = None
+    return rows, next_cursor
+
+
+def add_goal_followers(
+    session: Session, goal_gid: str, follower_gids: list[str]
+) -> Optional[AsanaGoal]:
+    goal = get_goal(session, goal_gid)
+    if goal is None:
+        return None
+    existing = goal.followers or []
+    existing_gids = {
+        (follower["gid"] if isinstance(follower, dict) else follower) for follower in existing
+    }
+    for gid in follower_gids:
+        if gid not in existing_gids:
+            existing.append({"gid": gid, "resource_type": "user"})
+            existing_gids.add(gid)
+    goal.followers = existing
+    session.flush()
+    return goal
+
+
+def remove_goal_followers(
+    session: Session, goal_gid: str, follower_gids: list[str]
+) -> Optional[AsanaGoal]:
+    goal = get_goal(session, goal_gid)
+    if goal is None:
+        return None
+    remove_set = set(follower_gids)
+    existing = goal.followers or []
+    goal.followers = [
+        follower for follower in existing
+        if (follower["gid"] if isinstance(follower, dict) else follower) not in remove_set
+    ]
+    session.flush()
+    return goal
+
+
+def list_parent_goals(
+    session: Session,
+    goal_gid: str,
+    *,
+    cursor: Optional[str] = None,
+    limit: int = 50,
+) -> tuple[list[AsanaGoal], Optional[str]]:
+    """Return goals that have goal_gid as a subgoal (i.e. parents of this goal)."""
+    # A parent goal is one whose gid appears as another goal's parent_goal_gid.
+    # Here we find goals where this goal_gid is a direct child.
+    goal = get_goal(session, goal_gid)
+    if goal is None or goal.parent_goal_gid is None:
+        return [], None
+    parent = get_goal(session, goal.parent_goal_gid)
+    if parent is None:
+        return [], None
+    return [parent], None
+
+
+def add_subgoal(
+    session: Session, parent_goal_gid: str, subgoal_gid: str
+) -> Optional[AsanaGoal]:
+    """Set a goal as a subgoal of a parent goal."""
+    _ensure_goal_stub(session, parent_goal_gid)
+    _ensure_goal_stub(session, subgoal_gid)
+    subgoal = session.get(AsanaGoal, subgoal_gid)
+    subgoal.parent_goal_gid = parent_goal_gid
+    session.flush()
+    return subgoal
+
+
+def remove_subgoal(
+    session: Session, parent_goal_gid: str, subgoal_gid: str
+) -> Optional[AsanaGoal]:
+    """Remove a subgoal relationship from a parent goal."""
+    subgoal = session.get(AsanaGoal, subgoal_gid)
+    if subgoal is None:
+        return None
+    if subgoal.parent_goal_gid == parent_goal_gid:
+        subgoal.parent_goal_gid = None
+        session.flush()
+    return subgoal

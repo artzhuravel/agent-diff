@@ -9,7 +9,7 @@ import yaml
 
 from pipeline.config import PipelineConfig, load_config
 from pipeline.extraction.endpoint_references import (
-    PropertyReference,
+    Reference,
     find_property_references,
 )
 
@@ -53,7 +53,7 @@ def test_property_name_compound_form_hits(tmp_path: Path) -> None:
     }
     references = find_property_references(schema, config, {})
     assert references == [
-        PropertyReference(token="owner_id", resource="users", path=("owner_id",)),
+        Reference(resource="users", kind="property", location="owner_id"),
     ]
 
 
@@ -73,7 +73,7 @@ def test_qualifier_prefix_strip(tmp_path: Path) -> None:
     references = find_property_references(schema, config, {})
     assert len(references) == 1
     assert references[0].resource == "repos"
-    assert references[0].token == "parent_repo_id"
+    assert references[0].location == "parent_repo_id"
 
 
 def test_property_ref_to_bound_schema_hits(tmp_path: Path) -> None:
@@ -89,8 +89,7 @@ def test_property_ref_to_bound_schema_hits(tmp_path: Path) -> None:
     references = find_property_references(schema, config, bindings)
     assert len(references) == 1
     assert references[0].resource == "users"
-    assert references[0].token == "assignee"
-    assert references[0].path == ("assignee",)
+    assert references[0].location == "assignee"
 
 
 def test_name_and_ref_hit_same_resource_dedupes(tmp_path: Path) -> None:
@@ -123,7 +122,7 @@ def test_nested_inline_object_walked(tmp_path: Path) -> None:
     references = find_property_references(schema, config, {"User": "users"})
     assert len(references) == 1
     assert references[0].resource == "users"
-    assert references[0].path == ("meta", "actor")
+    assert references[0].location == "meta.actor"
 
 
 def test_array_items_walked(tmp_path: Path) -> None:
@@ -209,9 +208,9 @@ def test_ref_following_descends_into_component_schema(tmp_path: Path) -> None:
         {"Issue": "issues", "User": "users"},
         component_schemas=component_schemas,
     )
-    resources_by_path = {reference.path: reference.resource for reference in references}
-    assert resources_by_path[("assignee",)] == "users"
-    assert resources_by_path[("repo_id",)] == "repos"
+    resources_by_location = {reference.location: reference.resource for reference in references}
+    assert resources_by_location["assignee"] == "users"
+    assert resources_by_location["repo_id"] == "repos"
 
 
 def test_ref_following_cycle_safety(tmp_path: Path) -> None:

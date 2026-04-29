@@ -26,6 +26,8 @@ NUMERIC = string.digits                               # 0-9
 HEX_LOWER = string.digits + "abcdef"                  # 0-9a-f
 
 ID_FORMATS: dict[str, dict] = {
+    "goal": {"alphabet": NUMERIC, "length": 10},
+    "goal_relationship": {"alphabet": NUMERIC, "length": 10},
     "project": {"alphabet": NUMERIC, "length": 10},
     "section": {"alphabet": NUMERIC, "length": 10},
     "story": {"alphabet": NUMERIC, "length": 10},
