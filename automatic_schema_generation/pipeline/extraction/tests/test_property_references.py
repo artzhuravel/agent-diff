@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 from pipeline.config import PipelineConfig, load_config
-from pipeline.extraction.property_references import (
+from pipeline.extraction.endpoint_references import (
     PropertyReference,
     find_property_references,
 )

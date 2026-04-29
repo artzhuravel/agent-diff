@@ -60,18 +60,6 @@ def test_already_bound_schema_is_not_suggested(tmp_path: Path) -> None:
     assert suggest_aliases(spec, config) == {}
 
 
-def test_unreferenced_schema_is_not_suggested(tmp_path: Path) -> None:
-    """A schema that nobody ``$ref``s is dropped even if it would match."""
-    config = _config(tmp_path, {"repos": {"aliases": ["repo", "repository"]}})
-    spec = {
-        "paths": {},
-        "components": {
-            "schemas": {"full-repository": {"type": "object"}},
-        },
-    }
-    assert suggest_aliases(spec, config) == {}
-
-
 def test_token_hit_surfaces_suggestion(tmp_path: Path) -> None:
     config = _config(tmp_path, {"repos": {"aliases": ["repo", "repository"]}})
     spec = {
@@ -162,6 +150,18 @@ def test_ranking_by_ref_count(tmp_path: Path) -> None:
         "full-repository",
         "simple-repository",
     ]
+
+
+def test_unreferenced_schema_is_not_suggested(tmp_path: Path) -> None:
+    """A schema that nobody ``$ref``s is dropped even if it would match."""
+    config = _config(tmp_path, {"repos": {"aliases": ["repo", "repository"]}})
+    spec = {
+        "paths": {},
+        "components": {
+            "schemas": {"full-repository": {"type": "object"}},
+        },
+    }
+    assert suggest_aliases(spec, config) == {}
 
 
 def test_multi_token_hit_emits_under_multiple_resources(tmp_path: Path) -> None:

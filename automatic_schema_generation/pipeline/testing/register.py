@@ -10,9 +10,64 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from importlib import import_module
 from pathlib import Path
 from typing import Any
+
+
+def run_register_tests(ctx) -> None:
+    """``register_tests`` stage — scan routes.py and emit registry + impl doc.
+
+    The replica's routes module lives under ``backend/src/services/<slug>``;
+    we load it via ``import_module`` so we observe whatever Starlette
+    actually mounts (not what the spec claimed should exist). The
+    sqlalchemy pre-import is a workaround for backend's local
+    ``platform/`` package shadowing the stdlib ``platform`` module.
+    """
+    from pipeline.config import load_config
+
+    config = load_config(ctx.config_path)
+    output_dir = ctx.output_dir
+    endpoints_path = output_dir / "endpoints.json"
+
+    if not endpoints_path.exists():
+        print("\n=== REGISTER TESTS — skipped (run extract first) ===")
+        return
+
+    print("\n=== REGISTER TESTS — scanning implemented routes ===")
+    import sqlalchemy as _sa  # noqa: F401  — pre-import before path-shadowing kicks in
+    backend_src = str(config.target_dir.parent.parent)
+    if backend_src not in sys.path:
+        sys.path.insert(0, backend_src)
+    routes_module = f"services.{config.app_slug}.api.routes"
+
+    try:
+        implemented = scan_implemented_routes(routes_module)
+        endpoints_doc = json.loads(endpoints_path.read_text())
+        registry = build_test_registry(implemented, endpoints_doc, config.app_slug)
+
+        # Build implemented_endpoints doc — subset of endpoints.json
+        endpoints_block = endpoints_doc.get("endpoints") or {}
+        matched: dict[str, Any] = {}
+        for route in implemented:
+            key = f"{route['method']} {route['path']}"
+            if key in endpoints_block:
+                matched[key] = endpoints_block[key]
+
+        impl_doc = {
+            "endpoints": matched,
+            "schemas": endpoints_doc.get("schemas") or {},
+        }
+        write_registry(output_dir, impl_doc, registry)
+        print(
+            f"  {registry['implemented_count']} implemented, "
+            f"{registry['unimplemented_count']} unimplemented "
+            f"(of {registry['total_spec_endpoints']} total)"
+        )
+        print(f"  Wrote implemented_endpoints.json + test_registry.json to {output_dir}")
+    except Exception as exc:
+        print(f"  [error] Could not scan routes: {exc}")
 
 
 def scan_implemented_routes(routes_module: str) -> list[dict[str, Any]]:
@@ -64,7 +119,7 @@ def build_test_registry(
 
         if endpoint_meta:
             test_entry["subject"] = endpoint_meta.get("subject")
-            test_entry["summary"] = _extract_summary(endpoint_meta, endpoints_doc)
+            test_entry["summary"] = endpoint_meta.get("summary") or endpoint_meta.get("subject")
 
             path_params = re.findall(r"\{(\w+)\}", path)
             test_entry["path_params"] = path_params
@@ -87,14 +142,6 @@ def build_test_registry(
         "endpoints": test_entries,
         "unimplemented": unimplemented,
     }
-
-
-def _extract_summary(
-    endpoint_meta: dict[str, Any],
-    endpoints_doc: dict[str, Any],
-) -> str | None:
-    """Try to get a summary for the endpoint."""
-    return endpoint_meta.get("summary") or endpoint_meta.get("subject")
 
 
 def write_registry(

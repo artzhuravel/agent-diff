@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# End-to-end pipeline driver for multiple apps.
+# End-to-end pipeline driver for one or more apps.
 #
-# For each app passed on the command line (or the default trio if none
-# given), runs the full pipeline through register_tests, then runs
-# seed_template + test_endpoints. Per-app failures stop the run.
+# Runs every stage (init → ... → test_endpoints) for each app in
+# sequence. The seed_template stage handles dropping the postgres
+# template + bouncing uvicorn between apps, so no two-phase loop is
+# needed any more.
 #
 # Usage:
 #   ./run_e2e.sh                      # asana github todoist
@@ -25,25 +26,11 @@ fi
 echo ">>> Running end-to-end pipeline for: ${APPS[*]}"
 echo
 
-# Phase 1: build (no docker dependency). Each app runs through the
-# scaffold/configure/extract/implement/register chain in isolation.
 for app in "${APPS[@]}"; do
     echo "================================================================"
-    echo "  BUILD — $app"
+    echo "  $app"
     echo "================================================================"
-    python -m pipeline.run "apps/$app/app.yaml" --up-to-stage register_tests
-    echo
-done
-
-# Phase 2: seed + test (docker dependency). Done after every app's code
-# is generated so the backend only reseeds three times instead of once
-# per stage interleave.
-for app in "${APPS[@]}"; do
-    echo "================================================================"
-    echo "  SEED + TEST — $app"
-    echo "================================================================"
-    python -m pipeline.run "apps/$app/app.yaml" --stage seed_template
-    python -m pipeline.run "apps/$app/app.yaml" --stage test_endpoints
+    python -m pipeline.run "apps/$app/app.yaml"
     echo
 done
 

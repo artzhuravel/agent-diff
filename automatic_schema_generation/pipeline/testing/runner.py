@@ -18,11 +18,12 @@ import json
 import os
 import subprocess
 from collections import defaultdict
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from pipeline._refs import collect_refs, transitive_closure
 
 _PROMPT_TEMPLATE = Path(__file__).parent / "test_prompt.md"
 
@@ -61,36 +62,15 @@ def collect_schema_closure(
     endpoints_block = implemented_doc.get("endpoints") or {}
     ref_prefix = "#/schemas/"
 
-    seen_refs: set[str] = set()
-    frontier: set[str] = set()
-
-    def harvest(node: Any) -> None:
-        if isinstance(node, dict):
-            ref = node.get("$ref")
-            if isinstance(ref, str) and ref.startswith(ref_prefix):
-                frontier.add(ref[len(ref_prefix):])
-            for value in node.values():
-                harvest(value)
-        elif isinstance(node, list):
-            for item in node:
-                harvest(item)
-
+    seeds: set[str] = set()
     for endpoint in endpoints:
         key = f"{endpoint['method']} {endpoint['path']}"
         meta = endpoints_block.get(key) or {}
-        harvest(meta.get("responses"))
-        harvest(meta.get("request_body"))
-        harvest(meta.get("parameters"))
+        seeds.update(collect_refs(meta.get("responses"), ref_prefix))
+        seeds.update(collect_refs(meta.get("request_body"), ref_prefix))
+        seeds.update(collect_refs(meta.get("parameters"), ref_prefix))
 
-    while frontier:
-        name = frontier.pop()
-        if name in seen_refs:
-            continue
-        seen_refs.add(name)
-        schema = schemas_block.get(name)
-        if isinstance(schema, dict):
-            harvest(schema)
-
+    seen_refs = transitive_closure(seeds, schemas_block, ref_prefix)
     return {name: schemas_block[name] for name in sorted(seen_refs) if name in schemas_block}
 
 
@@ -304,70 +284,65 @@ def _invoke_claude(prompt: str, *, model: str, timeout: int) -> tuple[int, str, 
     return (result.returncode, result.stdout, result.stderr)
 
 
-def run_test_endpoints(
-    *,
-    config_path: Path,
-    app_name: str,
-    app_slug: str,
-    target_dir: Path,
-    output_dir: Path,
-    replicas_yaml: Path,
-    repo_root: Path,
-    model: str,
-    batch_size: int = 7,
-    max_iterations: int = 3,
-    force: bool = False,
-    dry_run: bool = False,
-    timeout: int = 1800,
-    only_subjects: list[str] | None = None,
-    invoke: Callable[[str, str, int], tuple[int, str, str]] | None = None,
-) -> dict[str, Any]:
-    """Drive the full test stage. Returns a summary dict for logging."""
+def run_test_endpoints_stage(ctx) -> None:
+    """``test_endpoints`` stage — drive each batch through ``claude -p``,
+    parse the structured results JSON, and merge it into ``test_registry.json``.
+
+    Replicas YAML + repo root paths are derived from this file's location.
+    """
+    from pipeline.config import load_config
+
+    config = load_config(ctx.config_path)
+    output_dir = ctx.output_dir
+    repo_root = Path(__file__).parent.parent.parent.parent
+    replicas_yaml = repo_root / "backend" / "src" / "services" / "replicas.yaml"
+
     registry_path = output_dir / "test_registry.json"
     implemented_path = output_dir / "implemented_endpoints.json"
+
+    print(
+        f"\n=== TEST ENDPOINTS — drive replica via curl, fix bugs in place "
+        f"({ctx.test_model}) ==="
+    )
+    if ctx.test_force_retest:
+        print("  [force] retesting endpoints already marked tested=true")
     if not registry_path.exists() or not implemented_path.exists():
-        return {
-            "skipped": True,
-            "reason": "test_registry.json or implemented_endpoints.json missing — run register_tests first",
-        }
+        print("  [skip] test_registry.json or implemented_endpoints.json missing — run register_tests first")
+        return
 
     registry = json.loads(registry_path.read_text())
     implemented_doc = json.loads(implemented_path.read_text())
 
-    grouped = group_by_subject(registry.get("endpoints") or [], include_tested=force)
-    if only_subjects:
-        grouped = {name: items for name, items in grouped.items() if name in set(only_subjects)}
-
+    grouped = group_by_subject(registry.get("endpoints") or [], include_tested=ctx.test_force_retest)
+    if ctx.only_resources:
+        grouped = {name: items for name, items in grouped.items() if name in set(ctx.only_resources)}
     if not grouped:
-        return {"skipped": True, "reason": "nothing to test (all endpoints already tested — pass --force to retest)"}
+        print("  [skip] nothing to test (all endpoints already tested — pass --force-retest to retest)")
+        return
 
-    prompt_dir = config_path.parent / "pipeline_prompts"
+    prompt_dir = ctx.prompt_dir
     results_dir = output_dir / "test_results"
     prompt_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    summary: dict[str, Any] = {
-        "subjects": {},
-        "total_batches": 0,
-        "endpoints_attempted": 0,
-        "endpoints_recorded": 0,
-        "endpoints_passed": 0,
-    }
-
-    invoke_fn = invoke or (lambda prompt, model, timeout: _invoke_claude(prompt, model=model, timeout=timeout))
+    total_batches = 0
+    total_attempted = 0
+    total_recorded = 0
+    total_passed = 0
 
     for subject in sorted(grouped):
         endpoints = grouped[subject]
-        batches = chunk(endpoints, batch_size)
-        summary["total_batches"] += len(batches)
-        subject_summary = {"batches": len(batches), "endpoints": len(endpoints), "passed": 0, "recorded": 0}
+        batches = chunk(endpoints, ctx.test_batch_size)
+        total_batches += len(batches)
+        subject_recorded = 0
+        subject_passed = 0
 
         for batch_index, batch in enumerate(batches, start=1):
             output_path = results_dir / f"{subject}_batch{batch_index}.json"
             prompt = build_test_prompt(
-                app_name=app_name,
-                app_slug=app_slug,
-                target_dir=target_dir,
+                app_name=config.app_name,
+                app_slug=config.app_slug,
+                target_dir=config.target_dir,
                 subject=subject,
                 batch_index=batch_index,
                 batch_total=len(batches),
@@ -375,20 +350,20 @@ def run_test_endpoints(
                 implemented_doc=implemented_doc,
                 replicas_yaml=replicas_yaml,
                 output_path=output_path,
-                max_iterations=max_iterations,
+                max_iterations=ctx.test_max_iterations,
                 repo_root=repo_root,
             )
             (prompt_dir / f"test_{subject}_batch{batch_index}.md").write_text(prompt)
-            summary["endpoints_attempted"] += len(batch)
+            total_attempted += len(batch)
 
-            if dry_run:
+            if ctx.dry_run:
                 print(f"  [dry-run] {subject} batch {batch_index}/{len(batches)} — {len(batch)} endpoints, prompt at pipeline_prompts/test_{subject}_batch{batch_index}.md")
                 continue
 
-            print(f"  {subject} batch {batch_index}/{len(batches)} — {len(batch)} endpoints, calling {model} (timeout {timeout}s)...")
+            print(f"  {subject} batch {batch_index}/{len(batches)} — {len(batch)} endpoints, calling {ctx.test_model} (timeout {ctx.test_timeout}s)...")
             if output_path.exists():
                 output_path.unlink()
-            return_code, stdout, stderr = invoke_fn(prompt, model, timeout)
+            return_code, _stdout, stderr = _invoke_claude(prompt, model=ctx.test_model, timeout=ctx.test_timeout)
             if return_code != 0:
                 print(f"    [warn] claude exit {return_code}: {stderr.strip()[:300]}")
 
@@ -396,14 +371,19 @@ def run_test_endpoints(
             if not results:
                 print(f"    [warn] no parseable results at {output_path} — endpoints in this batch stay untested")
                 continue
+
             updated = merge_into_registry(registry_path, results)
             passed = sum(1 for result in results if result.get("passed"))
-            summary["endpoints_recorded"] += updated
-            summary["endpoints_passed"] += passed
-            subject_summary["recorded"] += updated
-            subject_summary["passed"] += passed
+            total_recorded += updated
+            total_passed += passed
+            subject_recorded += updated
+            subject_passed += passed
             print(f"    recorded {updated}/{len(batch)}; {passed} passed")
 
-        summary["subjects"][subject] = subject_summary
+        print(f"    {subject}: {subject_passed}/{subject_recorded} passed across {len(batches)} batch(es)")
 
-    return summary
+    print(
+        f"  Done. Batches: {total_batches}, "
+        f"recorded {total_recorded}/{total_attempted}, "
+        f"passed {total_passed}"
+    )

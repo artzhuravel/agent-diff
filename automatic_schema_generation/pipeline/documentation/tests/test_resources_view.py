@@ -9,8 +9,8 @@ from typing import Any
 import yaml
 
 from pipeline.config import PipelineConfig, load_config
-from pipeline.documentation.endpoints import generate_endpoints_document
-from pipeline.documentation.resources import (
+from pipeline.documentation.builder import (
+    generate_endpoints_document,
     generate_resources_document,
     write_resources_document,
 )

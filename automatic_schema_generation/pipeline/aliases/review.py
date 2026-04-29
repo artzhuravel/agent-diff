@@ -70,14 +70,17 @@ def review_suggestions(
                 cache[key] = verdict_reason
                 new_verdicts[suggestion.schema_name] = verdict_reason
 
-        reviewed[resource] = [
-            ReviewedSuggestion(
-                suggestion=suggestion,
-                verdict=(cached.get(suggestion.schema_name) or new_verdicts.get(suggestion.schema_name) or ("uncertain", "missing"))[0],
-                reason=(cached.get(suggestion.schema_name) or new_verdicts.get(suggestion.schema_name) or ("uncertain", "missing"))[1],
+        entries: list[ReviewedSuggestion] = []
+        for suggestion in resource_suggestions:
+            verdict, reason = (
+                cached.get(suggestion.schema_name)
+                or new_verdicts.get(suggestion.schema_name)
+                or ("uncertain", "missing")
             )
-            for suggestion in resource_suggestions
-        ]
+            entries.append(
+                ReviewedSuggestion(suggestion=suggestion, verdict=verdict, reason=reason)
+            )
+        reviewed[resource] = entries
 
     _save_cache(cache_path, cache)
     return reviewed

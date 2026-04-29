@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pipeline._refs import collect_refs, transitive_closure
 from pipeline.config import PipelineConfig
 
 _PASS1_TEMPLATE = Path(__file__).parent / "implementation_prompt_pass1.md"
@@ -100,8 +101,14 @@ def _fill_template(template_path: Path, placeholders: dict[str, str]) -> str:
 
 
 def _load_mock_patterns() -> str:
+    """Format the example pattern files under mocks/ as fenced code blocks.
+
+    Files are stored with a .txt extension because they are example
+    snippets read as text and embedded into the LLM prompt — they are
+    not importable Python modules and shouldn't be linted as such.
+    """
     lines: list[str] = []
-    for path in sorted(_MOCKS_DIR.glob("*.py")):
+    for path in sorted(_MOCKS_DIR.glob("*.txt")):
         lines.append(f"### {path.stem.replace('_', ' ').title()}")
         lines.append(f"```python\n{path.read_text().rstrip()}\n```")
         lines.append("")
@@ -232,29 +239,17 @@ def _format_referenced_schemas(
     endpoints_block = endpoints_doc.get("endpoints") or {}
     ref_prefix = "#/schemas/"
 
-    referenced_names: set[str] = set()
+    seeds: set[str] = set()
     for key in resource.get("endpoint_keys") or []:
         entry = endpoints_block.get(key)
         if entry is None:
             continue
-        _collect_refs(entry.get("responses"), ref_prefix, referenced_names)
-        _collect_refs(entry.get("request_body"), ref_prefix, referenced_names)
+        seeds.update(collect_refs(entry.get("responses"), ref_prefix))
+        seeds.update(collect_refs(entry.get("request_body"), ref_prefix))
 
-    # Follow $ref chains transitively — if JobResponse refs JobBase
-    # which refs AsanaResource, include all three
-    frontier = referenced_names - bound_names
-    all_referenced: set[str] = set()
-    while frontier:
-        name = frontier.pop()
-        if name in all_referenced or name in bound_names:
-            continue
-        all_referenced.add(name)
-        schema = all_schemas.get(name)
-        if isinstance(schema, dict):
-            nested: set[str] = set()
-            _collect_refs(schema, ref_prefix, nested)
-            frontier.update(nested - all_referenced - bound_names)
-
+    all_referenced = transitive_closure(
+        seeds, all_schemas, ref_prefix, exclude=bound_names,
+    )
     if not all_referenced:
         return "{}"
     extra_schemas = {
@@ -263,19 +258,6 @@ def _format_referenced_schemas(
         if name in all_schemas
     }
     return json.dumps(extra_schemas, indent=2)
-
-
-def _collect_refs(obj: Any, prefix: str, out: set[str]) -> None:
-    """Recursively find all $ref values starting with prefix."""
-    if isinstance(obj, dict):
-        ref = obj.get("$ref")
-        if isinstance(ref, str) and ref.startswith(prefix):
-            out.add(ref[len(prefix):])
-        for value in obj.values():
-            _collect_refs(value, prefix, out)
-    elif isinstance(obj, list):
-        for item in obj:
-            _collect_refs(item, prefix, out)
 
 
 def _format_related(
@@ -437,8 +419,7 @@ def _format_external(
         if schema_name in all_bound:
             continue
         # Match 1: schema $refs into this resource's bound schemas
-        refs_found: set[str] = set()
-        _collect_refs(schema_body, "#/components/schemas/", refs_found)
+        refs_found = collect_refs(schema_body, "#/components/schemas/")
         matching = refs_found & this_resource_schemas
         if matching:
             external[schema_name] = f"refs: {', '.join(sorted(matching))}"

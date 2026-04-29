@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 from pipeline.config import PipelineConfig, load_config
-from pipeline.extraction.path_references import PathReference, find_path_references
+from pipeline.extraction.endpoint_references import PathReference, find_path_references
 
 
 def _config(tmp_path: Path, resources: dict[str, Any]) -> PipelineConfig:

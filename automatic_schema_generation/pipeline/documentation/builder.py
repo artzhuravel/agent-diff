@@ -1,20 +1,28 @@
-"""Documentation generation — endpoints.json.
+"""Documentation generation — endpoints.json + resources.json.
 
-Assembles a per-endpoint catalog from the spec, attaches the
-reference evidence produced by Groups A/B/C/E, and includes the
-transitive closure of every component schema reachable from any
-endpoint. The output is self-contained: ``$ref``s are rewritten
-from ``#/components/schemas/*`` to ``#/schemas/*`` so the top-level
-``schemas`` block replaces ``spec.components.schemas`` for
-downstream consumption.
+Two deterministic builders that produce the structured docs the
+implement stage consumes:
 
-Deterministic: no LLM calls, no prompt templating. Re-running
-produces identical output (except ``_meta.generated_at``).
+* ``generate_endpoints_document`` — per-endpoint catalog with
+  parameters, body, responses, and Group A/B/C/E reference evidence,
+  plus the transitive closure of every component schema reachable
+  from any endpoint. ``$ref``s are rewritten from
+  ``#/components/schemas/*`` to ``#/schemas/*`` so the top-level
+  ``schemas`` block replaces ``spec.components.schemas`` for
+  downstream consumption.
+* ``generate_resources_document`` — resource-first pivot built on
+  top of an ``endpoints.json`` document, grouping endpoint keys,
+  bound schemas, and outgoing/incoming reference evidence per
+  configured resource.
+
+Both functions are pure of LLM calls and re-runnable; only the
+``_meta.generated_at`` field changes between runs.
 """
 
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import asdict
@@ -22,8 +30,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from pipeline._refs import collect_refs, transitive_closure
 from pipeline.config import PipelineConfig
 from pipeline.extraction.endpoint_references import find_endpoint_references
+from pipeline.extraction.reference_groups import group_references_by_pair
 from pipeline.extraction.schema_bindings import build_schema_bindings
 
 _HTTP_METHODS = frozenset({
@@ -31,6 +41,11 @@ _HTTP_METHODS = frozenset({
 })
 _OLD_REF_PREFIX = "#/components/schemas/"
 _NEW_REF_PREFIX = "#/schemas/"
+
+
+# ---------------------------------------------------------------------------
+# endpoints.json — per-endpoint catalog with reachable schemas inlined.
+# ---------------------------------------------------------------------------
 
 
 def generate_endpoints_document(
@@ -69,6 +84,12 @@ def generate_endpoints_document(
         "endpoints": endpoints,
         "schemas": schemas,
     }
+
+
+def write_endpoints_document(document: dict[str, Any], output_path: Path) -> None:
+    """Serialize ``document`` to ``output_path`` as indented JSON."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(document, indent=2))
 
 
 def _build_entry(
@@ -127,38 +148,14 @@ def _collect_transitive_schemas(
     raw_components = (spec.get("components") or {}).get("schemas") or {}
     component_schemas: dict[str, Any] = raw_components if isinstance(raw_components, dict) else {}
 
-    reachable: set[str] = set()
-    frontier: set[str] = set()
-    _find_refs(endpoints, frontier)
-    while frontier:
-        name = frontier.pop()
-        if name in reachable:
-            continue
-        reachable.add(name)
-        target = component_schemas.get(name)
-        if isinstance(target, dict):
-            nested: set[str] = set()
-            _find_refs(target, nested)
-            frontier.update(nested - reachable)
+    seeds = collect_refs(endpoints, _OLD_REF_PREFIX)
+    reachable = transitive_closure(seeds, component_schemas, _OLD_REF_PREFIX)
 
     return {
         name: copy.deepcopy(component_schemas[name])
         for name in sorted(reachable)
         if name in component_schemas
     }
-
-
-def _find_refs(node: Any, out: set[str]) -> None:
-    """Walk a nested structure and collect schema ``$ref`` target names."""
-    if isinstance(node, dict):
-        for key, value in node.items():
-            if key == "$ref" and isinstance(value, str) and value.startswith(_OLD_REF_PREFIX):
-                out.add(value[len(_OLD_REF_PREFIX):])
-            else:
-                _find_refs(value, out)
-    elif isinstance(node, list):
-        for item in node:
-            _find_refs(item, out)
 
 
 def _rewrite_refs(node: Any) -> Any:
@@ -188,7 +185,7 @@ def classify_responses(spec: dict[str, Any]) -> tuple[dict[str, Any], dict[str, 
     if not component_responses:
         return {}, {}
 
-    # Count how many responses reference each schema
+    # Count how many responses reference each schema.
     from collections import Counter
     schema_usage: Counter[str] = Counter()
     for name, body in component_responses.items():
@@ -198,7 +195,7 @@ def classify_responses(spec: dict[str, Any]) -> tuple[dict[str, Any], dict[str, 
 
     # A schema is shared if 3+ responses use it, OR if its name indicates
     # an error/validation pattern (these are generic even if only one
-    # response definition references them, since endpoints reuse them widely)
+    # response definition references them, since endpoints reuse them widely).
     error_keywords = {"error", "validation"}
     shared_schemas = set()
     for schema, count in schema_usage.items():
@@ -216,7 +213,6 @@ def classify_responses(spec: dict[str, Any]) -> tuple[dict[str, Any], dict[str, 
         ref = _response_schema_ref(body)
 
         entry = copy.deepcopy(body)
-        # Inline the referenced schema body for completeness
         if ref and ref in component_schemas:
             entry["_resolved_schema"] = copy.deepcopy(component_schemas[ref])
 
@@ -231,7 +227,7 @@ def classify_responses(spec: dict[str, Any]) -> tuple[dict[str, Any], dict[str, 
 def _response_schema_ref(response_body: dict[str, Any]) -> str | None:
     """Extract the schema $ref from a response body, if any."""
     content = response_body.get("content") or {}
-    for media_type, media in content.items():
+    for _media_type, media in content.items():
         schema = media.get("schema") or {}
         ref = schema.get("$ref")
         if isinstance(ref, str):
@@ -239,7 +235,86 @@ def _response_schema_ref(response_body: dict[str, Any]) -> str | None:
     return None
 
 
-def write_endpoints_document(document: dict[str, Any], output_path: Path) -> None:
+# ---------------------------------------------------------------------------
+# resources.json — resource-first pivot of the endpoints document.
+# ---------------------------------------------------------------------------
+
+
+def generate_resources_document(
+    spec: dict[str, Any],
+    config: PipelineConfig,
+    endpoints_document: dict[str, Any],
+    bindings: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Build the resources.json document structure."""
+    if bindings is None:
+        bindings = build_schema_bindings(spec, config)
+
+    groups = group_references_by_pair(spec, config, bindings)
+    schemas_block = endpoints_document.get("schemas") or {}
+    endpoints_block = endpoints_document.get("endpoints") or {}
+
+    # Invert the bindings map: resource → list of schema names.
+    schemas_by_resource: dict[str, list[str]] = {}
+    for schema_name, resource in bindings.items():
+        schemas_by_resource.setdefault(resource, []).append(schema_name)
+
+    # Partition endpoint keys by subject.
+    endpoint_keys_by_subject: dict[str, list[str]] = {}
+    for key, entry in endpoints_block.items():
+        subject = entry.get("subject")
+        if isinstance(subject, str):
+            endpoint_keys_by_subject.setdefault(subject, []).append(key)
+
+    resources: dict[str, dict[str, Any]] = {}
+    for resource_name in sorted(config.resources.aliases_by_resource.keys()):
+        outgoing: dict[str, list[dict[str, Any]]] = {}
+        incoming: dict[str, list[dict[str, Any]]] = {}
+        for (source, target), evidence_list in groups.items():
+            serialized = [asdict(evidence) for evidence in evidence_list]
+            if source == resource_name:
+                outgoing.setdefault(target, []).extend(serialized)
+            if target == resource_name and source != resource_name:
+                incoming.setdefault(source, []).extend(serialized)
+
+        bound_names = sorted(schemas_by_resource.get(resource_name, []))
+        bound_schemas = {
+            name: schemas_block[name]
+            for name in bound_names
+            if name in schemas_block
+        }
+
+        resources[resource_name] = {
+            "resource": resource_name,
+            "primary_key": config.resources.primary_keys_lookup.get(resource_name),
+            "bound_schemas": bound_schemas,
+            "endpoint_keys": sorted(endpoint_keys_by_subject.get(resource_name, [])),
+            "outgoing_references": outgoing,
+            "incoming_references": incoming,
+        }
+
+    return {
+        "_meta": {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "config_path": str(config.config_path) if config.config_path else None,
+            "resource_count": len(resources),
+            "source_endpoints_hash": _hash_document(endpoints_document),
+        },
+        "resources": resources,
+    }
+
+
+def write_resources_document(document: dict[str, Any], output_path: Path) -> None:
     """Serialize ``document`` to ``output_path`` as indented JSON."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(document, indent=2))
+
+
+def _hash_document(document: dict[str, Any]) -> str:
+    """Stable SHA256 of the document, excluding ``_meta.generated_at``."""
+    scrubbed = dict(document)
+    meta = dict(document.get("_meta") or {})
+    meta.pop("generated_at", None)
+    scrubbed["_meta"] = meta
+    payload = json.dumps(scrubbed, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()

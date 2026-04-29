@@ -34,146 +34,7 @@ ORM model to cover the union of all fields across these schemas. Fields that
 appear in only some schemas should be nullable.
 
 ```json
-{}
-```
-
-### Endpoints
-
-Each entry below is an endpoint that operates on **tags**. Build
-one operation function and one route handler per endpoint.
-
-#### DELETE /tags/{tag_gid}
-_Delete a tag_
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tags
-_Get multiple tags_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - workspace (query, optional): string
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tags/{tag_gid}
-_Get a tag_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tasks/{task_gid}/tags
-_Get a task's tags_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /workspaces/{workspace_gid}/tags
-_Get tags in a workspace_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### POST /tags
-_Create a tag_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### POST /workspaces/{workspace_gid}/tags
-_Create a tag in a workspace_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-#### PUT /tags/{tag_gid}
-_Update a tag_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-
-### Referenced Schemas
-
-These schemas appear in the endpoints above (as response bodies or request
-bodies) but are not direct representations of **tags**. They
-define the shapes your serializers must produce and your operations must
-accept.
-
-```json
 {
-  "EmptyResponse": {
-    "type": "object",
-    "description": "An empty object. Some endpoints do not return an object on success. The success is conveyed through a 2-- status code and returning an empty object."
-  },
-  "Error": {
-    "type": "object",
-    "properties": {
-      "message": {
-        "type": "string",
-        "readOnly": true,
-        "description": "Message providing more detail about the error that occurred, if available.",
-        "example": "project: Missing input"
-      },
-      "help": {
-        "type": "string",
-        "readOnly": true,
-        "description": "Additional information directing developers to resources on how to address and fix the problem, if available.",
-        "example": "For more information on API status codes and how to handle them, read the docs on errors: https://asana.github.io/developer-docs/#errors'"
-      },
-      "phrase": {
-        "type": "string",
-        "readOnly": true,
-        "description": "*500 errors only*. A unique error phrase which can be used when contacting developer support to help identify the exact occurrence of the problem in Asana's logs.",
-        "example": "6 sad squid snuggle softly"
-      }
-    }
-  },
-  "ErrorResponse": {
-    "description": "Sadly, sometimes requests to the API are not successful. Failures can\noccur for a wide range of reasons. In all cases, the API should return\nan HTTP Status Code that indicates the nature of the failure,\nwith a response body in JSON format containing additional information.\n\n\nIn the event of a server error the response body will contain an error\nphrase. These phrases are automatically generated using the\n[node-asana-phrase\nlibrary](https://github.com/Asana/node-asana-phrase) and can be used by\nAsana support to quickly look up the incident that caused the server\nerror.",
-    "type": "object",
-    "properties": {
-      "errors": {
-        "type": "array",
-        "items": {
-          "$ref": "#/schemas/Error"
-        }
-      }
-    }
-  },
-  "NextPage": {
-    "type": "object",
-    "nullable": true,
-    "description": "*Conditional*. This property is only present when a limit query parameter is provided in the request. When making a paginated request, the API will return a number of results as specified by the limit parameter. If more results exist, then the response will contain a next_page attribute, which will include an offset, a relative path attribute, and a full uri attribute. If there are no more pages available, next_page will be null and no offset will be provided. Note that an offset token will expire after some time, as data may have changed.",
-    "properties": {
-      "offset": {
-        "type": "string",
-        "readOnly": true,
-        "description": "Pagination offset for the request.",
-        "example": "eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
-      },
-      "path": {
-        "type": "string",
-        "readOnly": true,
-        "description": "A relative path containing the query parameters to fetch for next_page",
-        "example": "/tasks/12345/attachments?limit=2&offset=eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
-      },
-      "uri": {
-        "type": "string",
-        "format": "uri",
-        "readOnly": true,
-        "description": "A full uri containing the query parameters to fetch for next_page",
-        "example": "https://app.asana.com/api/1.0/tasks/12345/attachments?limit=2&offset=eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
-      }
-    }
-  },
   "TagBase": {
     "allOf": [
       {
@@ -336,54 +197,144 @@ accept.
   },
   "TagUpdateRequest": {
     "$ref": "#/schemas/TagBaseRequest"
+  }
+}
+```
+
+### Endpoints
+
+Each entry below is an endpoint that operates on **tags**. Build
+one operation function and one route handler per endpoint.
+
+#### DELETE /tags/{tag_gid}
+_Delete a tag_
+Errors: 400, 401, 403, 404, 500
+
+#### GET /tags
+_Get multiple tags_
+Parameters:
+  - limit (query, optional): integer
+  - offset (query, optional): string
+  - workspace (query, optional): string
+  - opt_fields (query, optional): array
+Errors: 400, 401, 403, 404, 500
+
+#### GET /tags/{tag_gid}
+_Get a tag_
+Parameters:
+  - opt_fields (query, optional): array
+Errors: 400, 401, 403, 404, 500
+
+#### GET /tasks/{task_gid}/tags
+_Get a task's tags_
+Parameters:
+  - opt_fields (query, optional): array
+Errors: 400, 401, 403, 404, 500
+
+#### GET /workspaces/{workspace_gid}/tags
+_Get tags in a workspace_
+Parameters:
+  - limit (query, optional): integer
+  - offset (query, optional): string
+  - opt_fields (query, optional): array
+Errors: 400, 401, 403, 404, 500
+
+#### POST /tags
+_Create a tag_
+Parameters:
+  - opt_fields (query, optional): array
+Request body (application/json):
+  - data: object
+Errors: 400, 401, 403, 404, 500
+
+#### POST /workspaces/{workspace_gid}/tags
+_Create a tag in a workspace_
+Parameters:
+  - opt_fields (query, optional): array
+Request body (application/json):
+  - data: object
+Errors: 400, 401, 403, 404, 500
+
+#### PUT /tags/{tag_gid}
+_Update a tag_
+Parameters:
+  - opt_fields (query, optional): array
+Request body (application/json):
+  - data: object
+Errors: 400, 401, 403, 404, 500
+
+
+### Referenced Schemas
+
+These schemas appear in the endpoints above (as response bodies or request
+bodies) but are not direct representations of **tags**. They
+define the shapes your serializers must produce and your operations must
+accept.
+
+```json
+{
+  "EmptyResponse": {
+    "type": "object",
+    "description": "An empty object. Some endpoints do not return an object on success. The success is conveyed through a 2-- status code and returning an empty object."
   },
-  "UserCompact": {
-    "description": "A *user* object represents an account in Asana that can be given access to various workspaces, projects, and tasks.",
+  "Error": {
     "type": "object",
     "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
+      "message": {
         "type": "string",
         "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
+        "description": "Message providing more detail about the error that occurred, if available.",
+        "example": "project: Missing input"
       },
-      "resource_type": {
-        "description": "The base type of this resource.",
+      "help": {
         "type": "string",
         "readOnly": true,
-        "example": "user",
-        "x-insert-after": "gid"
+        "description": "Additional information directing developers to resources on how to address and fix the problem, if available.",
+        "example": "For more information on API status codes and how to handle them, read the docs on errors: https://asana.github.io/developer-docs/#errors'"
       },
-      "name": {
+      "phrase": {
         "type": "string",
-        "description": "*Read-only except when same user as requester*. The user's name.",
-        "example": "Greg Sanchez"
+        "readOnly": true,
+        "description": "*500 errors only*. A unique error phrase which can be used when contacting developer support to help identify the exact occurrence of the problem in Asana's logs.",
+        "example": "6 sad squid snuggle softly"
       }
     }
   },
-  "WorkspaceCompact": {
-    "description": "A *workspace* is the highest-level organizational unit in Asana. All projects and tasks have an associated workspace.",
+  "ErrorResponse": {
+    "description": "Sadly, sometimes requests to the API are not successful. Failures can\noccur for a wide range of reasons. In all cases, the API should return\nan HTTP Status Code that indicates the nature of the failure,\nwith a response body in JSON format containing additional information.\n\n\nIn the event of a server error the response body will contain an error\nphrase. These phrases are automatically generated using the\n[node-asana-phrase\nlibrary](https://github.com/Asana/node-asana-phrase) and can be used by\nAsana support to quickly look up the incident that caused the server\nerror.",
     "type": "object",
     "properties": {
-      "gid": {
-        "description": "Globally unique identifier of the resource, as a string.",
+      "errors": {
+        "type": "array",
+        "items": {
+          "$ref": "#/schemas/Error"
+        }
+      }
+    }
+  },
+  "NextPage": {
+    "type": "object",
+    "nullable": true,
+    "description": "*Conditional*. This property is only present when a limit query parameter is provided in the request. When making a paginated request, the API will return a number of results as specified by the limit parameter. If more results exist, then the response will contain a next_page attribute, which will include an offset, a relative path attribute, and a full uri attribute. If there are no more pages available, next_page will be null and no offset will be provided. Note that an offset token will expire after some time, as data may have changed.",
+    "properties": {
+      "offset": {
         "type": "string",
         "readOnly": true,
-        "example": "12345",
-        "x-insert-after": false
+        "description": "Pagination offset for the request.",
+        "example": "eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
       },
-      "resource_type": {
-        "description": "The base type of this resource.",
+      "path": {
         "type": "string",
         "readOnly": true,
-        "example": "workspace",
-        "x-insert-after": "gid"
+        "description": "A relative path containing the query parameters to fetch for next_page",
+        "example": "/tasks/12345/attachments?limit=2&offset=eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
       },
-      "name": {
-        "description": "The name of the workspace.",
+      "uri": {
         "type": "string",
-        "example": "My Company Workspace"
+        "format": "uri",
+        "readOnly": true,
+        "description": "A full uri containing the query parameters to fetch for next_page",
+        "example": "https://app.asana.com/api/1.0/tasks/12345/attachments?limit=2&offset=eyJ0eXAiOJiKV1iQLCJhbGciOiJIUzI1NiJ9"
       }
     }
   }
@@ -444,7 +395,7 @@ accept.
 - Insert Route entries **above** the `/{_unknown_path:path}` catch-all
 - Fixed paths before parameterized paths
 - Use `_session(request)`, `_principal_user_id(request)`, `_parse_json_body(request)`,
-- **Error responses**: Already implemented in `core/errors.py`: `bad_request()`, `unauthorized()`, `forbidden()`, `not_found()`, `handle_exception()`
+- **Error responses**: Already implemented in `core/errors.py`: `bad_request()`, `unauthorized()`, `payment_required()`, `forbidden()`, `not_found()`, `internal_server_error()`, `handle_exception()`
 
 For error codes not covered above, implement the response inline or add a new constructor to `core/errors.py`.
   `_pagination_params(request)` from the existing request helpers
