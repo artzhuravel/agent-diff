@@ -1,8 +1,10 @@
 """Schema bindings (Group D).
 
 Binds each component schema to a canonical resource. A schema binds
-if (D1) its normalized name hits ``aliases_lookup``, or (D3) it is a
-pass-through to another schema via a top-level ``$ref`` or composes
+if (D1) its normalized name hits ``aliases_lookup``, (D2) its declared
+``title`` field normalizes to an alias — useful for specs that use
+opaque generated names but populate human-readable titles — or (D3) it
+is a pass-through to another schema via a top-level ``$ref`` or composes
 via ``allOf`` / ``oneOf`` / ``anyOf`` over already-bound schemas.
 ``allOf`` propagates when branches that bind agree on one target
 (conflict aborts); ``oneOf`` / ``anyOf`` propagate only when every
@@ -36,6 +38,19 @@ def build_schema_bindings(
     # D1. Direct name hit on component schemas.
     for name in schemas:
         resource = aliases_lookup.get(normalize_identifier(name))
+        if resource is not None:
+            bindings[name] = resource
+
+    # D2. Title-based hit — catches schemas with opaque generated names
+    # (e.g. ``webhook_payload_42``) that nonetheless declare a clean
+    # ``title`` like ``"Project"``. Only fires for schemas D1 missed.
+    for name, schema in schemas.items():
+        if name in bindings or not isinstance(schema, dict):
+            continue
+        title = schema.get("title")
+        if not isinstance(title, str) or not title:
+            continue
+        resource = aliases_lookup.get(normalize_identifier(title))
         if resource is not None:
             bindings[name] = resource
 

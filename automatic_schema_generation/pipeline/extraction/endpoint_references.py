@@ -13,10 +13,16 @@ composed into a single per-endpoint record:
 * **Group E — body** (``find_body_references``): top-level schema
   ``$ref``s in the request body and each declared response.
 
-The composer (``find_endpoint_references``) runs all four against
-one operation and infers the operation's subject via the "rightmost
-URL alias" rule: walking URL segments right-to-left, the first token
-whose normalized form hits ``aliases_lookup`` is the subject.
+Each walk returns ``list[Reference]`` — a uniform shape with
+``(resource, kind, location)``. ``kind`` discriminates the match site
+(``url_segment``, ``path_parameter``, ``query``, ``header``, ``cookie``,
+``body_request``, ``body_response``, ``property``); ``location``
+carries the specific match (URL segment, parameter name, dotted
+property path, or ``"<media_type>:<schema_name>"`` for body refs).
+The composer (``find_endpoint_references``) runs all four against one
+operation and infers the operation's subject via the "rightmost URL
+alias" rule: walking URL segments right-to-left, the first token whose
+normalized form hits ``aliases_lookup`` is the subject.
 
 Group D — schema bindings — is built once per spec and lives in
 ``schema_bindings.py``; it's passed in as ``bindings``.
@@ -42,38 +48,23 @@ _PARAMETER_LOCATIONS = frozenset({"query", "header", "cookie"})
 
 
 # ---------------------------------------------------------------------------
-# Reference dataclasses — one per group, plus the composed record.
+# Unified reference record + per-endpoint composition.
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class PathReference:
-    token: str
+class Reference:
+    """A single resource reference detected inside one endpoint.
+
+    ``kind`` is one of: ``url_segment``, ``path_parameter``, ``query``,
+    ``header``, ``cookie``, ``body_request``, ``body_response``,
+    ``property``. ``location`` encodes the specific match site (URL
+    segment, parameter name, dotted property path, or
+    ``"<media_type>:<schema_name>"`` for body references).
+    """
     resource: str
-    source: str  # "url_segment" | "path_parameter"
-
-
-@dataclass(frozen=True)
-class ParameterReference:
-    token: str
-    resource: str
-    location: str  # "query" | "header" | "cookie"
-
-
-@dataclass(frozen=True)
-class BodyReference:
-    resource: str
-    role: str            # "request" | "response"
-    status_code: str | None
-    media_type: str
-    schema_name: str
-
-
-@dataclass(frozen=True)
-class PropertyReference:
-    token: str
-    resource: str
-    path: tuple[str, ...]
+    kind: str
+    location: str
 
 
 @dataclass(frozen=True)
@@ -82,10 +73,7 @@ class EndpointReferences:
     path: str
     subject: str | None
     subject_source: str   # "url_rightmost_alias" | "no_alias_in_url"
-    path_references: list[PathReference]
-    parameter_references: list[ParameterReference]
-    body_references: list[BodyReference]
-    property_references: list[PropertyReference]
+    references: list[Reference]
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +85,7 @@ def find_path_references(
     path: str,
     path_item: dict[str, Any],
     config: PipelineConfig,
-) -> list[PathReference]:
+) -> list[Reference]:
     """URL segments + declared path parameters that hit aliases_lookup.
 
     Assumes config aliases are fully expanded at load time — the loader
@@ -105,7 +93,7 @@ def find_path_references(
     is enough (no split fallback, no suffix stripping at walk time).
     """
     aliases_lookup = config.resources.aliases_lookup
-    candidates: list[tuple[str, str]] = []
+    candidates: list[tuple[str, str]] = []  # (token, kind)
 
     for segment in path.split("/"):
         stripped = segment.strip("{}")
@@ -120,18 +108,7 @@ def find_path_references(
             if isinstance(name, str) and name:
                 candidates.append((name, "path_parameter"))
 
-    seen: set[tuple[str, str, str]] = set()
-    references: list[PathReference] = []
-    for token, source in candidates:
-        resource = aliases_lookup.get(normalize_identifier(token))
-        if resource is None:
-            continue
-        key = (token, resource, source)
-        if key in seen:
-            continue
-        seen.add(key)
-        references.append(PathReference(token=token, resource=resource, source=source))
-    return references
+    return _dedup_resolve(candidates, aliases_lookup)
 
 
 # ---------------------------------------------------------------------------
@@ -142,14 +119,14 @@ def find_path_references(
 def find_parameter_references(
     path_item: dict[str, Any],
     config: PipelineConfig,
-) -> list[ParameterReference]:
+) -> list[Reference]:
     """Non-path parameter hits — the ones ``find_path_references`` skips.
 
     ``$ref`` parameters (without a local ``name``) are silently skipped;
     resolving them into ``components.parameters`` is a later milestone.
     """
     aliases_lookup = config.resources.aliases_lookup
-    candidates: list[tuple[str, str]] = []
+    candidates: list[tuple[str, str]] = []  # (token, kind)
 
     for block in _parameter_blocks(path_item):
         for parameter in block.get("parameters") or []:
@@ -162,20 +139,7 @@ def find_parameter_references(
             if isinstance(name, str) and name:
                 candidates.append((name, location))
 
-    seen: set[tuple[str, str, str]] = set()
-    references: list[ParameterReference] = []
-    for token, location in candidates:
-        resource = aliases_lookup.get(normalize_identifier(token))
-        if resource is None:
-            continue
-        key = (token, resource, location)
-        if key in seen:
-            continue
-        seen.add(key)
-        references.append(
-            ParameterReference(token=token, resource=resource, location=location)
-        )
-    return references
+    return _dedup_resolve(candidates, aliases_lookup)
 
 
 # ---------------------------------------------------------------------------
@@ -187,17 +151,19 @@ def find_body_references(
     operation: dict[str, Any],
     spec: dict[str, Any],
     bindings: Mapping[str, str],
-) -> list[BodyReference]:
+) -> list[Reference]:
     """Top-level schema ``$ref``s in the body, resolved through Group D bindings.
 
     Top-level ``$ref``s into ``components.requestBodies`` /
     ``components.responses`` are dereferenced first. Descends into
     ``items`` and ``allOf`` / ``oneOf`` / ``anyOf`` branches, not
-    properties (that's Group C).
+    properties (that's Group C). Each emitted reference has
+    ``kind="body_request"`` or ``kind="body_response"`` and
+    ``location="<media_type>:<schema_name>"``.
     """
     raw_components = spec.get("components")
     components: dict[str, Any] = raw_components if isinstance(raw_components, dict) else {}
-    holders: list[tuple[str, str | None, dict[str, Any]]] = []
+    holders: list[tuple[str, dict[str, Any]]] = []  # (kind, content_dict)
 
     request_body = _deref(
         operation.get("requestBody"),
@@ -207,33 +173,32 @@ def find_body_references(
     if isinstance(request_body, dict):
         content = request_body.get("content")
         if isinstance(content, dict):
-            holders.append(("request", None, content))
+            holders.append(("body_request", content))
 
     responses = operation.get("responses")
     if isinstance(responses, dict):
         response_components = components.get("responses") or {}
-        for status_code, response in responses.items():
+        for response in responses.values():
             response = _deref(response, _RESPONSE_PREFIX, response_components)
             if not isinstance(response, dict):
                 continue
             content = response.get("content")
             if isinstance(content, dict):
-                holders.append(("response", str(status_code), content))
+                holders.append(("body_response", content))
 
-    seen: set[tuple[str, str, str | None, str, str]] = set()
-    references: list[BodyReference] = []
-    for role, status_code, content in holders:
+    seen: set[tuple[str, str, str]] = set()
+    references: list[Reference] = []
+    for kind, content in holders:
         for media_type, media in content.items():
             if not isinstance(media, dict):
                 continue
             for resource, schema_name in _walk_body_schema(media.get("schema"), bindings):
-                key = (resource, role, status_code, media_type, schema_name)
+                location = f"{media_type}:{schema_name}"
+                key = (resource, kind, location)
                 if key in seen:
                     continue
                 seen.add(key)
-                references.append(
-                    BodyReference(resource, role, status_code, media_type, schema_name)
-                )
+                references.append(Reference(resource, kind, location))
     return references
 
 
@@ -248,7 +213,7 @@ def find_property_references(
     bindings: Mapping[str, str],
     component_schemas: Mapping[str, Any] | None = None,
     start_schema_name: str | None = None,
-) -> list[PropertyReference]:
+) -> list[Reference]:
     """Hits at object property nodes — by name and by ``$ref`` into a bound schema.
 
     Descends through inline ``properties``, ``items``,
@@ -256,20 +221,23 @@ def find_property_references(
     ``component_schemas`` is given, ``$ref``s are also followed into
     their target schemas with a visited-set cycle guard; pass
     ``start_schema_name`` to pre-seed visited so self-refs don't loop.
+    Each emitted reference has ``kind="property"`` and
+    ``location`` = the dotted property path.
     """
     aliases_lookup = config.resources.aliases_lookup
     qualifier_prefixes = config.naming.qualifier_prefixes
     schemas = component_schemas or {}
     visited: set[str] = {start_schema_name} if start_schema_name else set()
-    seen: set[tuple[str, str, tuple[str, ...]]] = set()
-    references: list[PropertyReference] = []
+    seen: set[tuple[str, str]] = set()
+    references: list[Reference] = []
 
-    def record(token: str, resource: str, path: tuple[str, ...]) -> None:
-        key = (token, resource, path)
+    def record(resource: str, path: tuple[str, ...]) -> None:
+        location = ".".join(path)
+        key = (resource, location)
         if key in seen:
             return
         seen.add(key)
-        references.append(PropertyReference(token, resource, path))
+        references.append(Reference(resource, "property", location))
 
     def resolve_name(name: str) -> str | None:
         hit = aliases_lookup.get(normalize_identifier(name))
@@ -290,7 +258,7 @@ def find_property_references(
             target_name = ref_at_top[len(_SCHEMA_PREFIX):]
             target_resource = bindings.get(target_name)
             if target_resource is not None and path:
-                record(path[-1], target_resource, path)
+                record(target_resource, path)
             if target_name not in visited:
                 target_schema = schemas.get(target_name)
                 if isinstance(target_schema, dict):
@@ -303,7 +271,7 @@ def find_property_references(
             child_path = path + (name,)
             hit = resolve_name(name)
             if hit is not None:
-                record(name, hit, child_path)
+                record(hit, child_path)
             if isinstance(child, dict):
                 walk(child, child_path)
         items = node.get("items")
@@ -335,13 +303,13 @@ def find_endpoint_references(
     path_item: dict[str, Any] = (spec.get("paths") or {}).get(path) or {}
     operation: dict[str, Any] = path_item.get(method.lower()) or {}
 
-    path_refs = find_path_references(path, path_item, config)
-    parameter_refs = find_parameter_references(path_item, config)
-    body_refs = find_body_references(operation, spec, bindings)
+    references: list[Reference] = []
+    references.extend(find_path_references(path, path_item, config))
+    references.extend(find_parameter_references(path_item, config))
+    references.extend(find_body_references(operation, spec, bindings))
     component_schemas = (spec.get("components") or {}).get("schemas") or {}
-    property_refs: list[PropertyReference] = []
     for schema in _iter_body_schemas(operation, spec):
-        property_refs.extend(
+        references.extend(
             find_property_references(schema, config, bindings, component_schemas)
         )
 
@@ -362,16 +330,32 @@ def find_endpoint_references(
         path=path,
         subject=subject,
         subject_source=subject_source,
-        path_references=path_refs,
-        parameter_references=parameter_refs,
-        body_references=body_refs,
-        property_references=property_refs,
+        references=references,
     )
 
 
 # ---------------------------------------------------------------------------
 # Module-private helpers.
 # ---------------------------------------------------------------------------
+
+
+def _dedup_resolve(
+    candidates: list[tuple[str, str]],
+    aliases_lookup: Mapping[str, str],
+) -> list[Reference]:
+    """Resolve each ``(token, kind)`` candidate to a ``Reference`` and drop dups."""
+    seen: set[tuple[str, str, str]] = set()
+    out: list[Reference] = []
+    for token, kind in candidates:
+        resource = aliases_lookup.get(normalize_identifier(token))
+        if resource is None:
+            continue
+        key = (resource, kind, token)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(Reference(resource=resource, kind=kind, location=token))
+    return out
 
 
 def _parameter_blocks(path_item: dict[str, Any]) -> list[dict[str, Any]]:

@@ -1,11 +1,8 @@
 """Stage 1: Mechanical reference extraction from OpenAPI specs."""
 
 from pipeline.extraction.endpoint_references import (
-    BodyReference,
     EndpointReferences,
-    ParameterReference,
-    PathReference,
-    PropertyReference,
+    Reference,
     find_body_references,
     find_endpoint_references,
     find_parameter_references,

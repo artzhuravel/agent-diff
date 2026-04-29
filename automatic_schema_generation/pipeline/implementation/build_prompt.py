@@ -21,6 +21,7 @@ from pipeline.config import PipelineConfig
 
 _PASS1_TEMPLATE = Path(__file__).parent / "implementation_prompt_pass1.md"
 _PASS2_TEMPLATE = Path(__file__).parent / "implementation_prompt_pass2.md"
+_EXTEND_TEMPLATE = Path(__file__).parent / "implementation_prompt_extend.md"
 _MOCKS_DIR = Path(__file__).parent / "mocks"
 
 
@@ -52,8 +53,17 @@ def build_pass1_prompt(
     config: PipelineConfig,
     spec: dict[str, Any] | None = None,
     implemented_constructors: list[str] | None = None,
+    endpoint_filter: set[str] | None = None,
 ) -> str:
-    """Pass 1: base model, operations, serializers, routes — no FKs."""
+    """Pass 1: base model, operations, serializers, routes — no FKs.
+
+    ``endpoint_filter`` is an optional set of ``"METHOD /path"`` keys.
+    When supplied, only those endpoints (intersected with the resource's
+    own ``endpoint_keys``) appear in the prompt's ENDPOINTS block, so the
+    LLM emits handlers/operations/serializers only for the user-selected
+    subset. The ORM model still covers the union of all bound schemas —
+    we don't trim columns based on which endpoints were selected.
+    """
     resource, placeholders = _common_placeholders(resource_name, resources_doc, config)
     if implemented_constructors:
         error_note = (
@@ -69,11 +79,62 @@ def build_pass1_prompt(
         )
     placeholders.update({
         "BOUND_SCHEMAS": json.dumps(resource.get("bound_schemas") or {}, indent=2),
-        "ENDPOINTS": _format_endpoints(resource, endpoints_doc, spec),
+        "ENDPOINTS": _format_endpoints(resource, endpoints_doc, spec, endpoint_filter),
         "REFERENCED_SCHEMAS": _format_referenced_schemas(resource, endpoints_doc),
         "IMPLEMENTED_ERRORS": error_note,
     })
     return _fill_template(_PASS1_TEMPLATE, placeholders)
+
+
+def build_extend_prompt(
+    resource_name: str,
+    resources_doc: dict[str, Any],
+    endpoints_doc: dict[str, Any],
+    config: PipelineConfig,
+    spec: dict[str, Any] | None = None,
+    implemented_constructors: list[str] | None = None,
+    to_add: set[str] | None = None,
+    already_implemented: set[str] | None = None,
+) -> str:
+    """Extend an already-implemented resource with new endpoints only.
+
+    The caller has confirmed the resource's ORM class already exists in
+    ``database/schema.py`` (it may be a stub). This prompt instructs the
+    LLM to add only ``to_add`` endpoints, reuse existing infrastructure,
+    and leave ``already_implemented`` handlers/columns untouched.
+    """
+    resource, placeholders = _common_placeholders(resource_name, resources_doc, config)
+    if implemented_constructors:
+        error_note = (
+            "Already implemented in `core/errors.py`: "
+            + ", ".join(f"`{name}()`" for name in implemented_constructors)
+            + "\n\nFor error codes not covered above, implement the response "
+            "inline or add a new constructor to `core/errors.py`."
+        )
+    else:
+        error_note = (
+            "Check `core/errors.py` for any existing error constructors before "
+            "writing your own."
+        )
+    placeholders.update({
+        "BOUND_SCHEMAS": json.dumps(resource.get("bound_schemas") or {}, indent=2),
+        "ENDPOINTS_TO_ADD": _format_endpoints(resource, endpoints_doc, spec, to_add),
+        "ALREADY_IMPLEMENTED": _format_endpoint_list(already_implemented or set()),
+        "REFERENCED_SCHEMAS": _format_referenced_schemas(resource, endpoints_doc),
+        "IMPLEMENTED_ERRORS": error_note,
+    })
+    return _fill_template(_EXTEND_TEMPLATE, placeholders)
+
+
+def _format_endpoint_list(keys: set[str]) -> str:
+    """Bullet list for the ``ALREADY_IMPLEMENTED`` block."""
+    if not keys:
+        return (
+            "_(none in `api/routes.py` yet — the model class for this "
+            "resource may exist as a stub from a previous run; flesh it "
+            "out as needed for the new endpoints below)_"
+        )
+    return "\n".join(f"- `{key}`" for key in sorted(keys))
 
 
 def build_pass2_prompt(
@@ -119,11 +180,14 @@ def _format_endpoints(
     resource: dict[str, Any],
     endpoints_doc: dict[str, Any],
     spec: dict[str, Any] | None,
+    endpoint_filter: set[str] | None = None,
 ) -> str:
     endpoints_block = endpoints_doc.get("endpoints") or {}
     spec_paths = (spec or {}).get("paths") or {}
     lines: list[str] = []
     for key in resource.get("endpoint_keys") or []:
+        if endpoint_filter is not None and key not in endpoint_filter:
+            continue
         entry = endpoints_block.get(key)
         if entry is None:
             continue

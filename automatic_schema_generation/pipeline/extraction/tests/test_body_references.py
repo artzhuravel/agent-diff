@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pipeline.extraction.endpoint_references import BodyReference, find_body_references
+from pipeline.extraction.endpoint_references import Reference, find_body_references
 
 
 def test_empty_operation_returns_nothing() -> None:
@@ -21,17 +21,15 @@ def test_request_body_direct_ref_emits_hit() -> None:
     }
     references = find_body_references(operation, {}, {"IssueCreate": "issues"})
     assert references == [
-        BodyReference(
+        Reference(
             resource="issues",
-            role="request",
-            status_code=None,
-            media_type="application/json",
-            schema_name="IssueCreate",
+            kind="body_request",
+            location="application/json:IssueCreate",
         ),
     ]
 
 
-def test_response_body_direct_ref_emits_hit_with_status() -> None:
+def test_response_body_direct_ref_emits_hit() -> None:
     operation = {
         "responses": {
             "200": {
@@ -46,10 +44,9 @@ def test_response_body_direct_ref_emits_hit_with_status() -> None:
     references = find_body_references(operation, {}, {"Issue": "issues"})
     assert len(references) == 1
     reference = references[0]
-    assert reference.role == "response"
-    assert reference.status_code == "200"
+    assert reference.kind == "body_response"
     assert reference.resource == "issues"
-    assert reference.schema_name == "Issue"
+    assert reference.location == "application/json:Issue"
 
 
 def test_response_array_items_walked() -> None:
@@ -71,7 +68,7 @@ def test_response_array_items_walked() -> None:
     references = find_body_references(operation, {}, {"Issue": "issues"})
     assert len(references) == 1
     assert references[0].resource == "issues"
-    assert references[0].schema_name == "Issue"
+    assert references[0].location == "application/json:Issue"
 
 
 def test_request_body_ref_into_components_is_dereferenced() -> None:
@@ -94,7 +91,7 @@ def test_request_body_ref_into_components_is_dereferenced() -> None:
     }
     references = find_body_references(operation, spec, {"Issue": "issues"})
     assert len(references) == 1
-    assert references[0].role == "request"
+    assert references[0].kind == "body_request"
     assert references[0].resource == "issues"
 
 
@@ -120,8 +117,7 @@ def test_response_ref_into_components_is_dereferenced() -> None:
     }
     references = find_body_references(operation, spec, {"Issue": "issues"})
     assert len(references) == 1
-    assert references[0].role == "response"
-    assert references[0].status_code == "200"
+    assert references[0].kind == "body_response"
     assert references[0].resource == "issues"
 
 
@@ -178,8 +174,8 @@ def test_all_of_emits_every_bound_branch() -> None:
     bindings = {"BaseIssue": "issues", "IssueUpdate": "issues"}
     references = find_body_references(operation, {}, bindings)
     # Same resource, two different schema_names → two entries.
-    schema_names = {reference.schema_name for reference in references}
-    assert schema_names == {"BaseIssue", "IssueUpdate"}
+    locations = {reference.location for reference in references}
+    assert locations == {"application/json:BaseIssue", "application/json:IssueUpdate"}
 
 
 def test_inline_schema_without_ref_emits_nothing() -> None:
@@ -220,7 +216,10 @@ def test_unbound_ref_is_silently_skipped() -> None:
     assert find_body_references(operation, {}, {"Issue": "issues"}) == []
 
 
-def test_multiple_response_codes_each_emit_separately() -> None:
+def test_multiple_response_codes_collapse_when_shape_identical() -> None:
+    """The unified shape drops status_code — same media/schema across status codes
+    dedups to one entry. Cardinality of distinct status codes is no longer
+    tracked at this layer (downstream consumers don't use it)."""
     operation = {
         "responses": {
             "200": {
@@ -240,12 +239,12 @@ def test_multiple_response_codes_each_emit_separately() -> None:
         },
     }
     references = find_body_references(operation, {}, {"Issue": "issues"})
-    status_codes = {reference.status_code for reference in references}
-    assert status_codes == {"200", "201"}
+    assert len(references) == 1
+    assert references[0].location == "application/json:Issue"
 
 
 def test_dedup_collapses_identical_hits() -> None:
-    """Same (resource, role, status, media, schema) dedupes to one entry."""
+    """Same (resource, kind, location) dedupes to one entry."""
     operation = {
         "responses": {
             "200": {

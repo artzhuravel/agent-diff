@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "method": "DELETE",
+      "path": "/goals/{goal_gid}",
+      "passed": true,
+      "iterations": 1,
+      "diagnosis": "DELETE returns 200 with {\"data\": {}} matching EmptyResponse schema; 404 with error envelope on bogus gid; GET after DELETE returns 404 confirming soft-delete consistency.",
+      "curl_examples": [
+        "curl -s -X DELETE -H 'x-impersonate-user-id: test-user' http://localhost:8000/api/env/$ENV_ID/services/asana/goals/<goal_gid>"
+      ],
+      "code_changes": []
+    }
+  ]
+}

@@ -110,12 +110,10 @@ def _build_entry(
         "parameters": copy.deepcopy(operation.get("parameters") or []),
         "request_body": copy.deepcopy(operation.get("requestBody")),
         "responses": responses,
-        "references": {
-            "path": [asdict(reference) for reference in result.path_references],
-            "parameters": [asdict(reference) for reference in result.parameter_references],
-            "body": [asdict(reference) for reference in result.body_references],
-            "property": [asdict(reference) for reference in result.property_references],
-        },
+        # Flat list of unified ``Reference`` records — discriminate via
+        # ``kind`` (url_segment / path_parameter / query / header / cookie /
+        # body_request / body_response / property).
+        "references": [asdict(reference) for reference in result.references],
     }
 
 

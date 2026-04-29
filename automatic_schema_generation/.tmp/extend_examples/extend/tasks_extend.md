@@ -1,37 +1,56 @@
-# Entity Implementation (Pass 1 — Base): tasks
+# Entity Extension: tasks
 
-You are implementing the **tasks** resource for the Asana API
-replica. Build the base model, CRUD operations, serializers, and route handlers.
-
-**Do NOT add ForeignKey columns, relationship() declarations, or association
-tables in this pass.** Those will be added in a separate step. Focus only on
-the resource's own columns, operations, and endpoints.
+You are adding new endpoints to the **tasks** resource for the
+Asana API replica. The resource already exists in the codebase — your
+job is to add **only the new endpoints listed below**, reusing the existing
+model, operations, serializers, and route file conventions.
 
 The full OpenAPI spec is available at: `/Users/azh/agent-diff/automatic_schema_generation/apps/asana/inputs/openapi.scoped.json`
-If any information in this prompt is unclear or seems incorrect, read the
-spec directly to resolve ambiguities.
+If anything in this prompt is unclear, read the spec directly to resolve it.
 
-Files to edit (all under `/Users/azh/agent-diff/backend/src/services/asana`):
-- `database/schema.py`
-- `database/operations.py`
-- `core/serializers.py`
-- `api/routes.py`
+**Read the existing files in `/Users/azh/agent-diff/backend/src/services/asana` first** before writing anything.
+You need to understand the existing structure to extend it correctly.
+
+Files you may edit (all under `/Users/azh/agent-diff/backend/src/services/asana`):
+- `database/schema.py` — only if a new endpoint requires a column that doesn't already exist
+- `database/operations.py` — add new functions for the new endpoints
+- `core/serializers.py` — only if a new endpoint returns a shape no existing serializer can produce
+- `api/routes.py` — add new handler functions and Route entries
 
 ---
 
-## Section 1: tasks
-
-### Identity
+## Identity
 
 - Table name: `asana_tasks`
 - Model class: `AsanaTask`
 - Primary key: `gid`
 
-### Schemas
+## Already implemented — do not modify
 
-These component schemas represent **tasks** in the API. Build your
-ORM model to cover the union of all fields across these schemas. Fields that
-appear in only some schemas should be nullable.
+The following endpoints already have handlers in `api/routes.py`. Do not
+change their handlers, the columns they read/write, or the serializers
+they call. Treat them as a fixed contract:
+
+- `POST /tasks`
+
+## New endpoints to add
+
+These are the **only** endpoints you should implement. Do not add any
+other endpoints — even if the spec defines them.
+
+#### GET /tasks/{task_gid}
+_Get a task_
+Parameters:
+  - opt_fields (query, optional): array
+Errors: 400, 401, 403, 404, 500
+
+
+## Bound schemas (reference)
+
+These are the component schemas that represent **tasks** in the
+API. The existing model class should already cover most of these. Use them
+to check whether the new endpoints need columns that aren't on the model
+yet.
 
 ```json
 {
@@ -552,50 +571,10 @@ appear in only some schemas should be nullable.
 }
 ```
 
-### Endpoints
+## Referenced schemas (reference)
 
-Each entry below is an endpoint that operates on **tasks**. Build
-one operation function and one route handler per endpoint.
-
-#### DELETE /tasks/{task_gid}
-_Delete a task_
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tasks
-_Get multiple tasks_
-Parameters:
-  - limit (query, optional): integer
-  - offset (query, optional): string
-  - assignee (query, optional): string
-  - project (query, optional): string
-  - section (query, optional): string
-  - workspace (query, optional): string
-  - completed_since (query, optional): string
-  - modified_since (query, optional): string
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### GET /tasks/{task_gid}
-_Get a task_
-Parameters:
-  - opt_fields (query, optional): array
-Errors: 400, 401, 403, 404, 500
-
-#### POST /tasks
-_Create a task_
-Parameters:
-  - opt_fields (query, optional): array
-Request body (application/json):
-  - data: object
-Errors: 400, 401, 403, 404, 500
-
-
-### Referenced Schemas
-
-These schemas appear in the endpoints above (as response bodies or request
-bodies) but are not direct representations of **tasks**. They
-define the shapes your serializers must produce and your operations must
-accept.
+These schemas appear in the new endpoints' request/response bodies but
+aren't direct representations of **tasks**.
 
 ```json
 {
@@ -1309,80 +1288,63 @@ accept.
 
 ---
 
-## Implementation Rules
+## Rules
 
-### Files you will edit
+### Model (`database/schema.py`)
 
-1. **`database/schema.py`** — add the ORM model class
-2. **`database/operations.py`** — add CRUD functions
-3. **`core/serializers.py`** — add serialization functions
-4. **`api/routes.py`** — add handler functions and Route entries
+- If the new endpoints reference fields that already exist on `AsanaTask`,
+  reuse them.
+- If a new endpoint requires a column that doesn't exist yet, add it to the
+  existing class as `Mapped[Optional[T]]` with `nullable=True` so existing
+  rows remain valid. Use the same type-mapping conventions as the rest of
+  the file (`String(N)` / `Integer` / `Boolean` / `JSONB` for nested
+  objects / `String(50)` for ISO timestamps).
+- **Do NOT** rename or remove existing columns.
+- **Do NOT** add ForeignKey columns or `relationship()` declarations in
+  this pass — Pass 2 handles relationships if needed.
+- If the existing class is a thin stub (only PK + tablename), flesh out the
+  columns the new endpoints require.
 
-### ORM model (`database/schema.py`)
+### Operations (`database/operations.py`)
 
-- Add a class `AsanaTask(Base)` with `__tablename__ = "asana_tasks"`
-- **Primary key**: look at the `gid` field in the bound schemas —
-  check its `type`, `format`, and `examples` to determine the correct column
-  type. Use `Integer` for integer IDs, `String(50)` for opaque string IDs,
-  `String(36)` for UUID-formatted strings, etc.
-- One column per field in the schemas above. Use these type mappings:
-  - `string` → `String(N)` or `Text` for long content
-  - `integer` → `Integer`
-  - `boolean` → `Boolean`
-  - `object` (nested) → `JSONB`. Use JSONB for nested objects that represent
-    settings, metadata, permissions, file maps, or any structure the API
-    returns as-is without filtering on individual sub-fields
-  - nullable fields → `Mapped[Optional[T]]` with `nullable=True`
-- Store timestamps as `String(50)` when the API returns ISO strings
-- Add `is_deleted: Mapped[bool]` with `default=False` for soft-delete support
-- **Do NOT add any ForeignKey columns or relationship() declarations** — those
-  will be added in Pass 2
-
-### CRUD operations (`database/operations.py`)
-
-- Every function takes `Session` as the first argument
-- Use `generate_id("task")` for new IDs
-- Use `now_iso()` for timestamp fields
-- Use `session.flush()` after mutations — never `session.commit()`
-- Filter out `is_deleted` rows in all read queries
-- Cursor pagination: fetch `limit + 1` rows, return next cursor from the last row
+- Add new functions for the new endpoints. Reuse existing functions where
+  possible (e.g. an existing `get_task` for ID lookups).
+- Every function takes `Session` as the first argument.
+- Use `generate_id("task")` for new IDs and `now_iso()` for
+  timestamps.
+- Use `session.flush()` after mutations — never `session.commit()`.
+- Filter out `is_deleted` rows in reads.
+- Cursor pagination: fetch `limit + 1` rows, return next cursor from the
+  last row.
 
 ### Serializers (`core/serializers.py`)
 
-- Return a dict matching the API response shape exactly
-- Use the same key names and casing as the original API
-- Include a `serialize_task_list()` for collection endpoints
-- For fields that reference other resources (e.g. `owner`, `user`), serialize
-  them as the raw column value for now — Pass 2 will refine these
+- Reuse existing serializers wherever the response shape matches.
+- Only add a new serializer when the new endpoint returns a shape no
+  existing serializer can produce.
 
-### Route handlers (`api/routes.py`)
+### Routes (`api/routes.py`)
 
-- One async handler per endpoint, following the pattern in the file
-- Insert Route entries **above** the `/{_unknown_path:path}` catch-all
-- Fixed paths before parameterized paths
-- Use `_session(request)`, `_principal_user_id(request)`, `_parse_json_body(request)`,
+- One async handler per new endpoint, matching the pattern of existing
+  handlers in the file.
+- Insert new `Route(...)` entries in the `routes: list[Route]` block,
+  **above** the `/{_unknown_path:path}` catch-all if one exists.
+- Fixed paths before parameterized paths.
+- Use `_session(request)`, `_principal_user_id(request)`,
+  `_parse_json_body(request)`, `_pagination_params(request)` — the same
+  request helpers the existing handlers use.
 - **Error responses**: Already implemented in `core/errors.py`: `bad_request()`, `unauthorized()`, `payment_required()`, `forbidden()`, `not_found()`, `internal_server_error()`, `handle_exception()`
 
 For error codes not covered above, implement the response inline or add a new constructor to `core/errors.py`.
-  `_pagination_params(request)` from the existing request helpers
-
-### Stubs from previous implementations
-
-Previous resource implementations may have created **stub models** for
-tasks in `database/schema.py`, marked with
-`# STUB — expand when implementing this resource`. If you find a stub
-for `AsanaTask`, **replace it** with the full implementation.
-Do not create a duplicate class — expand the stub in place.
 
 ### What NOT to do
 
-- Do not modify `database/base.py`
-- Do not remove or modify existing *completed* implementations for other
-  resources — but DO expand any stubs that exist for tasks
-- Do not invent API behavior not present in the endpoint definitions above
-- Do not hard-delete records — use soft-delete via `is_deleted`
-- Do not add ForeignKey, relationship(), or association tables — Pass 2 handles those
-
-Read the existing files in the target directory before editing. Preserve
-all existing code for other resources — add your new models, functions,
-and routes alongside what is already there.
+- Do not modify existing handlers, operations, or serializers for endpoints
+  in the "Already implemented" list.
+- Do not rename, retype, or drop existing columns.
+- Do not add endpoints that aren't in the "New endpoints to add" list.
+- Do not modify other resources' models, handlers, or serializers.
+- Do not modify `database/base.py`.
+- Do not hard-delete records — use soft-delete via `is_deleted`.
+- Do not add ForeignKey, relationship(), or association tables — Pass 2
+  handles those.
