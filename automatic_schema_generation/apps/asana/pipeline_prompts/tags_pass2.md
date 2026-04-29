@@ -366,6 +366,48 @@ evidence and schema shapes:
 Then build the appropriate FK columns, indexes, and `relationship()`
 declarations using the reference patterns above.
 
+### stories
+- Table: `asana_stories`
+- Primary key: `gid`
+- Direction: incoming
+- **Fields referencing stories**: `data.tag`
+
+These fields all point at the `asana_stories` table. Infer the correct FK relationship type and apply using the reference patterns above.
+
+Evidence:
+  - PUT /stories/{story_gid} — property: data.tag (incoming)
+  - GET /stories/{story_gid} — property: data.tag (incoming)
+  - POST /tasks/{task_gid}/stories — property: data.tag (incoming)
+  - POST /goals/{goal_gid}/stories — property: data.tag (incoming)
+
+Key fields (PK + fields referencing tags):
+```json
+{
+  "StoryBase": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  },
+  "StoryCompact": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  }
+}
+```
+
 ### tags
 - **SELF-REFERENTIAL** — this resource references itself
 - Use the Self Referential pattern: nullable FK to own table,
@@ -373,48 +415,164 @@ declarations using the reference patterns above.
 - Table: `asana_tags`
 - Primary key: `gid`
 - Direction: outgoing
+- **Fields referencing tags**: `data`
+
+These fields create a self-referential hierarchy. Add a nullable FK column (e.g. `parent_id`) pointing at `asana_tags.gid` with `remote_side=[gid]`.
 
 Evidence:
-  - GET /tags — url_segment: tags
   - POST /tags — url_segment: tags
-  - GET /tags/{tag_gid} — url_segment: tags
+  - POST /tags — property: data
+  - POST /tags — property: data
+  - GET /tags — url_segment: tags
+  - GET /tags — property: data
   - PUT /tags/{tag_gid} — url_segment: tags
+  - PUT /tags/{tag_gid} — url_segment: tag_gid
+  - PUT /tags/{tag_gid} — property: data
+  - PUT /tags/{tag_gid} — property: data
+  - GET /tags/{tag_gid} — url_segment: tags
+  - GET /tags/{tag_gid} — url_segment: tag_gid
+  - GET /tags/{tag_gid} — property: data
   - DELETE /tags/{tag_gid} — url_segment: tags
+  - DELETE /tags/{tag_gid} — url_segment: tag_gid
   - GET /tasks/{task_gid}/tags — url_segment: tags
-  - GET /workspaces/{workspace_gid}/tags — url_segment: tags
+  - GET /tasks/{task_gid}/tags — property: data
   - POST /workspaces/{workspace_gid}/tags — url_segment: tags
+  - POST /workspaces/{workspace_gid}/tags — property: data
+  - POST /workspaces/{workspace_gid}/tags — property: data
+  - GET /workspaces/{workspace_gid}/tags — url_segment: tags
+  - GET /workspaces/{workspace_gid}/tags — property: data
+
+Key fields (PK + fields referencing tags):
+```json
+{
+  "TagCompact": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  }
+}
+```
 
 ### tasks
 - Table: `asana_tasks`
 - Primary key: `gid`
 - Direction: outgoing, incoming
-- **Fields referencing tasks**: `data.tags`
+- **Fields referencing tasks**: `data.tag`, `data.tags`
 
 These fields all point at the `asana_tasks` table. Infer the correct FK relationship type and apply using the reference patterns above.
 
 Evidence:
   - GET /tasks/{task_gid}/tags — url_segment: tasks
+  - GET /tasks/{task_gid}/tags — url_segment: task_gid
   - POST /tasks — property: data.tags (incoming)
   - POST /tasks — property: data.tags (incoming)
+  - PUT /tasks/{task_gid} — property: data.tags (incoming)
+  - PUT /tasks/{task_gid} — property: data.tags (incoming)
   - GET /tasks/{task_gid} — property: data.tags (incoming)
-  - PUT /tasks/{task_gid} — property: data.tags (incoming)
-  - PUT /tasks/{task_gid} — property: data.tags (incoming)
   - GET /tags/{tag_gid}/tasks — url_segment: tags (incoming)
+  - GET /tags/{tag_gid}/tasks — url_segment: tag_gid (incoming)
   - POST /tasks/{task_gid}/subtasks — property: data.tags (incoming)
   - POST /tasks/{task_gid}/subtasks — property: data.tags (incoming)
   - POST /tasks/{task_gid}/setParent — property: data.tags (incoming)
+  - POST /tasks/{task_gid}/addTag — property: data.tag (incoming)
+  - POST /tasks/{task_gid}/removeTag — property: data.tag (incoming)
   - POST /tasks/{task_gid}/addFollowers — property: data.tags (incoming)
   - POST /tasks/{task_gid}/removeFollowers — property: data.tags (incoming)
   - GET /workspaces/{workspace_gid}/tasks/custom_id/{custom_id} — property: data.tags (incoming)
+
+Key fields (PK + fields referencing tags):
+```json
+{
+  "TaskCompact": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  }
+}
+```
+
+### users
+- Table: `asana_users`
+- Primary key: `gid`
+- Direction: outgoing
+- **Fields referencing users**: `data.followers`
+
+These fields all point at the `asana_users` table. Infer the correct FK relationship type and apply using the reference patterns above.
+
+Evidence:
+  - POST /tags — property: data.followers
+  - POST /tags — property: data.followers
+  - PUT /tags/{tag_gid} — property: data.followers
+  - GET /tags/{tag_gid} — property: data.followers
+  - POST /workspaces/{workspace_gid}/tags — property: data.followers
+  - POST /workspaces/{workspace_gid}/tags — property: data.followers
+
+Key fields (PK + fields referencing tags):
+```json
+{
+  "UserCompact": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  }
+}
+```
 
 ### workspaces
 - Table: `asana_workspaces`
 - Primary key: `gid`
 - Direction: outgoing
+- **Fields referencing workspaces**: `data.workspace`
+
+These fields all point at the `asana_workspaces` table. Infer the correct FK relationship type and apply using the reference patterns above.
 
 Evidence:
-  - GET /workspaces/{workspace_gid}/tags — url_segment: workspaces
+  - POST /tags — query: workspace
+  - POST /tags — property: data.workspace
+  - POST /tags — property: data.workspace
+  - GET /tags — query: workspace
+  - PUT /tags/{tag_gid} — property: data.workspace
+  - GET /tags/{tag_gid} — property: data.workspace
   - POST /workspaces/{workspace_gid}/tags — url_segment: workspaces
+  - POST /workspaces/{workspace_gid}/tags — url_segment: workspace_gid
+  - POST /workspaces/{workspace_gid}/tags — property: data.workspace
+  - GET /workspaces/{workspace_gid}/tags — url_segment: workspaces
+  - GET /workspaces/{workspace_gid}/tags — url_segment: workspace_gid
+
+Key fields (PK + fields referencing tags):
+```json
+{
+  "WorkspaceCompact": {
+    "properties": {
+      "gid": {
+        "description": "Globally unique identifier of the resource, as a string.",
+        "type": "string",
+        "readOnly": true,
+        "example": "12345",
+        "x-insert-after": false
+      }
+    }
+  }
+}
+```
 
 
 ---
@@ -426,7 +584,40 @@ These schemas reference **tags** but belong to entities that are
 declarations, or stub models for them. They are shown only so you understand
 how tags appears in the broader API.
 
-_No external schemas reference this resource._
+### TaskAddTagRequest
+```json
+{
+  "type": "object",
+  "properties": {
+    "tag": {
+      "description": "The tag's gid to add to the task.",
+      "type": "string",
+      "example": "13579"
+    }
+  },
+  "required": [
+    "tag"
+  ]
+}
+```
+
+### TaskRemoveTagRequest
+```json
+{
+  "type": "object",
+  "properties": {
+    "tag": {
+      "description": "The tag's gid to remove from the task.",
+      "type": "string",
+      "example": "13579"
+    }
+  },
+  "required": [
+    "tag"
+  ]
+}
+```
+
 
 ---
 

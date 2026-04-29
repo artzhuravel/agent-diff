@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from pipeline.config import PipelineConfig, load_config
-from pipeline.documentation.endpoints import (
+from pipeline.documentation.builder import (
     generate_endpoints_document,
     write_endpoints_document,
 )

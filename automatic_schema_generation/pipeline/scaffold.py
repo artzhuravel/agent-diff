@@ -26,6 +26,31 @@ _TEMPLATE_FILES = [
 ]
 
 
+def run_init(ctx) -> None:
+    """``init`` stage — scaffold target dir + register replica in replicas.yaml.
+
+    Reads the raw YAML (rather than ``load_config``) because the init
+    stage is allowed to run on a partially configured app.yaml — only
+    ``app_name``, ``app_slug``, ``target_dir``, and ``openapi_path`` are
+    consulted; aliases and resource shape don't have to exist yet.
+    """
+    print("\n=== INIT — scaffold + register replica ===")
+    raw = yaml.safe_load(ctx.config_path.read_text()) or {}
+    target_dir = (ctx.config_path.parent / raw.get("target_dir", "out")).resolve()
+
+    # Detect API path prefix for mount path (e.g. /api/v1 for Todoist)
+    openapi_path = (ctx.config_path.parent / raw.get("openapi_path", "")).resolve()
+    mount_suffix = ""
+    if openapi_path.exists():
+        spec_for_mount = json.loads(openapi_path.read_text())
+        mount_suffix = detect_mount_suffix(spec_for_mount)
+        if mount_suffix:
+            print(f"  Detected API prefix: /{mount_suffix}")
+
+    generate_scaffold(raw["app_name"], raw["app_slug"], target_dir, mount_suffix)
+    print(f"  Target: {target_dir}")
+
+
 def generate_scaffold(
     app_name: str,
     app_slug: str,

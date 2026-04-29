@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-04-26T17:15:20.190191+00:00",
+    "generated_at": "2026-04-29T07:55:01.676524+00:00",
     "config_path": "/Users/azh/agent-diff/automatic_schema_generation/apps/asana/app.yaml",
     "resource_count": 8,
     "source_endpoints_hash": "798cc5ab81fc4acb5a562675501087dee47058ad5ed49983a600af0eca3763a1"
@@ -577,18 +577,6 @@
             "location": "data.project"
           },
           {
-            "method": "GET",
-            "path": "/projects/{project_gid}/project_statuses",
-            "kind": "url_segment",
-            "location": "projects"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}/project_statuses",
-            "kind": "url_segment",
-            "location": "project_gid"
-          },
-          {
             "method": "POST",
             "path": "/projects/{project_gid}/project_statuses",
             "kind": "url_segment",
@@ -602,15 +590,15 @@
           },
           {
             "method": "GET",
-            "path": "/projects",
+            "path": "/projects/{project_gid}/project_statuses",
             "kind": "url_segment",
             "location": "projects"
           },
           {
             "method": "GET",
-            "path": "/projects",
-            "kind": "property",
-            "location": "data"
+            "path": "/projects/{project_gid}/project_statuses",
+            "kind": "url_segment",
+            "location": "project_gid"
           },
           {
             "method": "POST",
@@ -651,6 +639,96 @@
           {
             "method": "POST",
             "path": "/projects",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/projects",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "url_segment",
+            "location": "project_gid"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "url_segment",
+            "location": "project_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.project"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
@@ -665,84 +743,6 @@
             "path": "/projects/{project_gid}",
             "kind": "url_segment",
             "location": "project_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "url_segment",
-            "location": "projects"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "url_segment",
-            "location": "project_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.project"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "url_segment",
-            "location": "projects"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "url_segment",
-            "location": "project_gid"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.project"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.project"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
           },
           {
             "method": "POST",
@@ -775,18 +775,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "url_segment",
-            "location": "projects"
-          },
-          {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/teams/{team_gid}/projects",
             "kind": "url_segment",
@@ -830,13 +818,13 @@
           },
           {
             "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
+            "path": "/teams/{team_gid}/projects",
             "kind": "url_segment",
             "location": "projects"
           },
           {
             "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
+            "path": "/teams/{team_gid}/projects",
             "kind": "property",
             "location": "data"
           },
@@ -881,6 +869,18 @@
             "path": "/workspaces/{workspace_gid}/projects",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "property",
+            "location": "data"
           },
           {
             "method": "GET",
@@ -1107,19 +1107,19 @@
             "location": "data.custom_field_settings.parent"
           },
           {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -1319,54 +1319,6 @@
             "location": "data.owner"
           },
           {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.current_status.author"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.current_status.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.members"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.completed_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.followers"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.owner"
-          },
-          {
             "method": "PUT",
             "path": "/projects/{project_gid}",
             "kind": "property",
@@ -1452,6 +1404,54 @@
           },
           {
             "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.owner"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.current_status.author"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.current_status.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.members"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.completed_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.followers"
+          },
+          {
+            "method": "GET",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.owner"
@@ -1867,12 +1867,6 @@
         ],
         "workspaces": [
           {
-            "method": "GET",
-            "path": "/projects",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/projects",
             "kind": "query",
@@ -1892,9 +1886,9 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/projects",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -1903,8 +1897,8 @@
             "location": "data.workspace"
           },
           {
-            "method": "POST",
-            "path": "/teams/{team_gid}/projects",
+            "method": "GET",
+            "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.workspace"
           },
@@ -1915,16 +1909,10 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
-            "kind": "url_segment",
-            "location": "workspaces"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
-            "kind": "url_segment",
-            "location": "workspace_gid"
+            "method": "POST",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -1949,6 +1937,18 @@
             "path": "/workspaces/{workspace_gid}/projects",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "url_segment",
+            "location": "workspaces"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "url_segment",
+            "location": "workspace_gid"
           },
           {
             "method": "GET",
@@ -2001,12 +2001,6 @@
         ],
         "teams": [
           {
-            "method": "GET",
-            "path": "/projects",
-            "kind": "query",
-            "location": "team"
-          },
-          {
             "method": "POST",
             "path": "/projects",
             "kind": "query",
@@ -2026,9 +2020,9 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.team"
+            "path": "/projects",
+            "kind": "query",
+            "location": "team"
           },
           {
             "method": "PUT",
@@ -2038,6 +2032,12 @@
           },
           {
             "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.team"
+          },
+          {
+            "method": "GET",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.team"
@@ -2049,18 +2049,6 @@
             "location": "data.team"
           },
           {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "url_segment",
-            "location": "teams"
-          },
-          {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "url_segment",
-            "location": "team_gid"
-          },
-          {
             "method": "POST",
             "path": "/teams/{team_gid}/projects",
             "kind": "url_segment",
@@ -2083,6 +2071,18 @@
             "path": "/teams/{team_gid}/projects",
             "kind": "property",
             "location": "data.team"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "url_segment",
+            "location": "teams"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "url_segment",
+            "location": "team_gid"
           },
           {
             "method": "POST",
@@ -2131,12 +2131,6 @@
       "incoming_references": {
         "_unresolved_": [
           {
-            "method": "GET",
-            "path": "/allocations/{allocation_gid}",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
             "method": "PUT",
             "path": "/allocations/{allocation_gid}",
             "kind": "property",
@@ -2144,7 +2138,7 @@
           },
           {
             "method": "GET",
-            "path": "/allocations",
+            "path": "/allocations/{allocation_gid}",
             "kind": "property",
             "location": "data.parent"
           },
@@ -2156,7 +2150,7 @@
           },
           {
             "method": "GET",
-            "path": "/budgets",
+            "path": "/allocations",
             "kind": "property",
             "location": "data.parent"
           },
@@ -2168,12 +2162,18 @@
           },
           {
             "method": "GET",
+            "path": "/budgets",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "PUT",
             "path": "/budgets/{budget_gid}",
             "kind": "property",
             "location": "data.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/budgets/{budget_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -2203,19 +2203,19 @@
             "location": "data.parent"
           },
           {
+            "method": "PUT",
+            "path": "/goal_relationships/{goal_relationship_gid}",
+            "kind": "property",
+            "location": "data.supporting_resource"
+          },
+          {
+            "method": "PUT",
+            "path": "/goal_relationships/{goal_relationship_gid}",
+            "kind": "property",
+            "location": "data.supporting_resource"
+          },
+          {
             "method": "GET",
-            "path": "/goal_relationships/{goal_relationship_gid}",
-            "kind": "property",
-            "location": "data.supporting_resource"
-          },
-          {
-            "method": "PUT",
-            "path": "/goal_relationships/{goal_relationship_gid}",
-            "kind": "property",
-            "location": "data.supporting_resource"
-          },
-          {
-            "method": "PUT",
             "path": "/goal_relationships/{goal_relationship_gid}",
             "kind": "property",
             "location": "data.supporting_resource"
@@ -2233,18 +2233,6 @@
             "location": "data.supporting_resource"
           },
           {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.project"
-          },
-          {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
             "method": "PUT",
             "path": "/goals/{goal_gid}",
             "kind": "property",
@@ -2258,9 +2246,15 @@
           },
           {
             "method": "GET",
-            "path": "/goals",
-            "kind": "query",
-            "location": "project"
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.project"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
           },
           {
             "method": "POST",
@@ -2279,6 +2273,12 @@
             "path": "/goals",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/goals",
+            "kind": "query",
+            "location": "project"
           },
           {
             "method": "POST",
@@ -2347,12 +2347,6 @@
             "location": "data.new_project"
           },
           {
-            "method": "GET",
-            "path": "/memberships",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
             "method": "POST",
             "path": "/memberships",
             "kind": "property",
@@ -2360,12 +2354,18 @@
           },
           {
             "method": "GET",
-            "path": "/memberships/{membership_gid}",
+            "path": "/memberships",
             "kind": "property",
             "location": "data.parent"
           },
           {
             "method": "PUT",
+            "path": "/memberships/{membership_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
             "path": "/memberships/{membership_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -2383,25 +2383,25 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -2455,13 +2455,13 @@
             "location": "data.new_project"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/project_briefs/{project_brief_gid}",
             "kind": "property",
             "location": "data.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/project_briefs/{project_brief_gid}",
             "kind": "property",
             "location": "data.project"
@@ -2479,13 +2479,13 @@
             "location": "data.project"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/project_portfolio_settings/{project_portfolio_setting_gid}",
             "kind": "property",
             "location": "data.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/project_portfolio_settings/{project_portfolio_setting_gid}",
             "kind": "property",
             "location": "data.project"
@@ -2503,12 +2503,6 @@
             "location": "data.new_project"
           },
           {
-            "method": "GET",
-            "path": "/rates",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
             "method": "POST",
             "path": "/rates",
             "kind": "property",
@@ -2516,12 +2510,18 @@
           },
           {
             "method": "GET",
-            "path": "/rates/{rate_gid}",
+            "path": "/rates",
             "kind": "property",
             "location": "data.parent"
           },
           {
             "method": "PUT",
+            "path": "/rates/{rate_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
             "path": "/rates/{rate_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -2569,13 +2569,13 @@
             "location": "data.attributable_to"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.attributable_to"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.attributable_to"
@@ -2613,25 +2613,25 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -2639,18 +2639,6 @@
         ],
         "sections": [
           {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data.project"
-          },
-          {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
             "method": "PUT",
             "path": "/sections/{section_gid}",
             "kind": "property",
@@ -2664,15 +2652,15 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "url_segment",
-            "location": "projects"
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data.project"
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "url_segment",
-            "location": "project_gid"
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data.projects"
           },
           {
             "method": "POST",
@@ -2697,6 +2685,18 @@
             "path": "/projects/{project_gid}/sections",
             "kind": "property",
             "location": "data.projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "url_segment",
+            "location": "project_gid"
           },
           {
             "method": "POST",
@@ -2713,13 +2713,13 @@
         ],
         "stories": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.project"
@@ -2739,12 +2739,6 @@
         ],
         "tasks": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "project"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -2776,36 +2770,42 @@
           },
           {
             "method": "GET",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.projects"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.projects"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.memberships.project"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.project"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.project"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.projects"
@@ -2913,13 +2913,13 @@
             "location": "data.projects"
           },
           {
-            "method": "GET",
+            "method": "POST",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.attributable_to"
           },
           {
-            "method": "POST",
+            "method": "GET",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.attributable_to"
@@ -3002,6 +3002,42 @@
       "outgoing_references": {
         "sections": [
           {
+            "method": "PUT",
+            "path": "/sections/{section_gid}",
+            "kind": "url_segment",
+            "location": "sections"
+          },
+          {
+            "method": "PUT",
+            "path": "/sections/{section_gid}",
+            "kind": "url_segment",
+            "location": "section_gid"
+          },
+          {
+            "method": "PUT",
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/sections/{section_gid}",
+            "kind": "url_segment",
+            "location": "sections"
+          },
+          {
+            "method": "GET",
+            "path": "/sections/{section_gid}",
+            "kind": "url_segment",
+            "location": "section_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
             "method": "DELETE",
             "path": "/sections/{section_gid}",
             "kind": "url_segment",
@@ -3014,54 +3050,6 @@
             "location": "section_gid"
           },
           {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "url_segment",
-            "location": "sections"
-          },
-          {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "url_segment",
-            "location": "section_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/sections/{section_gid}",
-            "kind": "url_segment",
-            "location": "sections"
-          },
-          {
-            "method": "PUT",
-            "path": "/sections/{section_gid}",
-            "kind": "url_segment",
-            "location": "section_gid"
-          },
-          {
-            "method": "PUT",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "url_segment",
-            "location": "sections"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/projects/{project_gid}/sections",
             "kind": "url_segment",
@@ -3069,6 +3057,18 @@
           },
           {
             "method": "POST",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "url_segment",
+            "location": "sections"
+          },
+          {
+            "method": "GET",
             "path": "/projects/{project_gid}/sections",
             "kind": "property",
             "location": "data"
@@ -3100,18 +3100,6 @@
         ],
         "projects": [
           {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data.project"
-          },
-          {
-            "method": "GET",
-            "path": "/sections/{section_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
             "method": "PUT",
             "path": "/sections/{section_gid}",
             "kind": "property",
@@ -3125,15 +3113,15 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "url_segment",
-            "location": "projects"
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data.project"
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}/sections",
-            "kind": "url_segment",
-            "location": "project_gid"
+            "path": "/sections/{section_gid}",
+            "kind": "property",
+            "location": "data.projects"
           },
           {
             "method": "POST",
@@ -3158,6 +3146,18 @@
             "path": "/projects/{project_gid}/sections",
             "kind": "property",
             "location": "data.projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "url_segment",
+            "location": "projects"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}/sections",
+            "kind": "url_segment",
+            "location": "project_gid"
           },
           {
             "method": "POST",
@@ -3184,25 +3184,25 @@
       "incoming_references": {
         "stories": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.old_section"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.new_section"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.old_section"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.new_section"
@@ -3234,12 +3234,6 @@
         ],
         "tasks": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "section"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -3265,30 +3259,36 @@
           },
           {
             "method": "GET",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assignee_section"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.memberships.section"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assignee_section"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.section"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.section"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.assignee_section"
@@ -3816,6 +3816,60 @@
       "outgoing_references": {
         "stories": [
           {
+            "method": "PUT",
+            "path": "/stories/{story_gid}",
+            "kind": "url_segment",
+            "location": "stories"
+          },
+          {
+            "method": "PUT",
+            "path": "/stories/{story_gid}",
+            "kind": "url_segment",
+            "location": "story_gid"
+          },
+          {
+            "method": "PUT",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.story"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "url_segment",
+            "location": "stories"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "url_segment",
+            "location": "story_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.story"
+          },
+          {
             "method": "DELETE",
             "path": "/stories/{story_gid}",
             "kind": "url_segment",
@@ -3828,72 +3882,6 @@
             "location": "story_gid"
           },
           {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "url_segment",
-            "location": "stories"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "url_segment",
-            "location": "story_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.story"
-          },
-          {
-            "method": "PUT",
-            "path": "/stories/{story_gid}",
-            "kind": "url_segment",
-            "location": "stories"
-          },
-          {
-            "method": "PUT",
-            "path": "/stories/{story_gid}",
-            "kind": "url_segment",
-            "location": "story_gid"
-          },
-          {
-            "method": "PUT",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.story"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "url_segment",
-            "location": "stories"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/stories",
             "kind": "url_segment",
@@ -3919,13 +3907,13 @@
           },
           {
             "method": "GET",
-            "path": "/goals/{goal_gid}/stories",
+            "path": "/tasks/{task_gid}/stories",
             "kind": "url_segment",
             "location": "stories"
           },
           {
             "method": "GET",
-            "path": "/goals/{goal_gid}/stories",
+            "path": "/tasks/{task_gid}/stories",
             "kind": "property",
             "location": "data"
           },
@@ -3952,58 +3940,22 @@
             "path": "/goals/{goal_gid}/stories",
             "kind": "property",
             "location": "data.story"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}/stories",
+            "kind": "url_segment",
+            "location": "stories"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}/stories",
+            "kind": "property",
+            "location": "data"
           }
         ],
         "users": [
           {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.hearts.user"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.story.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.follower"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.task.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.old_people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.new_people_value"
-          },
-          {
             "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
@@ -4053,9 +4005,51 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
+            "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.hearts.user"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.story.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.follower"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.task.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.old_people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.new_people_value"
           },
           {
             "method": "POST",
@@ -4107,7 +4101,7 @@
           },
           {
             "method": "GET",
-            "path": "/goals/{goal_gid}/stories",
+            "path": "/tasks/{task_gid}/stories",
             "kind": "property",
             "location": "data.created_by"
           },
@@ -4158,29 +4152,35 @@
             "path": "/goals/{goal_gid}/stories",
             "kind": "property",
             "location": "data.new_people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}/stories",
+            "kind": "property",
+            "location": "data.created_by"
           }
         ],
         "sections": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.old_section"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.new_section"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.old_section"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.new_section"
@@ -4212,36 +4212,6 @@
         ],
         "tasks": [
           {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.task"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.duplicate_of"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.duplicated_from"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.dependency"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.target"
-          },
-          {
             "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
@@ -4273,15 +4243,33 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "url_segment",
-            "location": "tasks"
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.task"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "url_segment",
-            "location": "task_gid"
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.duplicate_of"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.duplicated_from"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.dependency"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.target"
           },
           {
             "method": "POST",
@@ -4324,6 +4312,18 @@
             "path": "/tasks/{task_gid}/stories",
             "kind": "property",
             "location": "data.target"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/stories",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/stories",
+            "kind": "url_segment",
+            "location": "task_gid"
           },
           {
             "method": "POST",
@@ -4358,13 +4358,13 @@
         ],
         "projects": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.project"
@@ -4384,13 +4384,13 @@
         ],
         "tags": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.tag"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.tag"
@@ -4592,18 +4592,6 @@
       "outgoing_references": {
         "tags": [
           {
-            "method": "GET",
-            "path": "/tags",
-            "kind": "url_segment",
-            "location": "tags"
-          },
-          {
-            "method": "GET",
-            "path": "/tags",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/tags",
             "kind": "url_segment",
@@ -4618,6 +4606,60 @@
           {
             "method": "POST",
             "path": "/tags",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/tags",
+            "kind": "url_segment",
+            "location": "tags"
+          },
+          {
+            "method": "GET",
+            "path": "/tags",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/tags/{tag_gid}",
+            "kind": "url_segment",
+            "location": "tags"
+          },
+          {
+            "method": "PUT",
+            "path": "/tags/{tag_gid}",
+            "kind": "url_segment",
+            "location": "tag_gid"
+          },
+          {
+            "method": "PUT",
+            "path": "/tags/{tag_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/tags/{tag_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/tags/{tag_gid}",
+            "kind": "url_segment",
+            "location": "tags"
+          },
+          {
+            "method": "GET",
+            "path": "/tags/{tag_gid}",
+            "kind": "url_segment",
+            "location": "tag_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/tags/{tag_gid}",
             "kind": "property",
             "location": "data"
           },
@@ -4635,48 +4677,6 @@
           },
           {
             "method": "GET",
-            "path": "/tags/{tag_gid}",
-            "kind": "url_segment",
-            "location": "tags"
-          },
-          {
-            "method": "GET",
-            "path": "/tags/{tag_gid}",
-            "kind": "url_segment",
-            "location": "tag_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/tags/{tag_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/tags/{tag_gid}",
-            "kind": "url_segment",
-            "location": "tags"
-          },
-          {
-            "method": "PUT",
-            "path": "/tags/{tag_gid}",
-            "kind": "url_segment",
-            "location": "tag_gid"
-          },
-          {
-            "method": "PUT",
-            "path": "/tags/{tag_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/tags/{tag_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "GET",
             "path": "/tasks/{task_gid}/tags",
             "kind": "url_segment",
             "location": "tags"
@@ -4688,18 +4688,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "url_segment",
-            "location": "tags"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/workspaces/{workspace_gid}/tags",
             "kind": "url_segment",
@@ -4713,6 +4701,18 @@
           },
           {
             "method": "POST",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "url_segment",
+            "location": "tags"
+          },
+          {
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/tags",
             "kind": "property",
             "location": "data"
@@ -4720,12 +4720,6 @@
         ],
         "workspaces": [
           {
-            "method": "GET",
-            "path": "/tags",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/tags",
             "kind": "query",
@@ -4745,9 +4739,9 @@
           },
           {
             "method": "GET",
-            "path": "/tags/{tag_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/tags",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -4757,15 +4751,9 @@
           },
           {
             "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "url_segment",
-            "location": "workspaces"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "url_segment",
-            "location": "workspace_gid"
+            "path": "/tags/{tag_gid}",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -4784,6 +4772,18 @@
             "path": "/workspaces/{workspace_gid}/tags",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "url_segment",
+            "location": "workspaces"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "url_segment",
+            "location": "workspace_gid"
           }
         ],
         "users": [
@@ -4800,13 +4800,13 @@
             "location": "data.followers"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/tags/{tag_gid}",
             "kind": "property",
             "location": "data.followers"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/tags/{tag_gid}",
             "kind": "property",
             "location": "data.followers"
@@ -4842,13 +4842,13 @@
       "incoming_references": {
         "stories": [
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.tag"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.tag"
@@ -4880,19 +4880,19 @@
             "location": "data.tags"
           },
           {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.tags"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.tags"
+          },
+          {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.tags"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.tags"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.tags"
@@ -5513,18 +5513,6 @@
       "outgoing_references": {
         "tasks": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "url_segment",
-            "location": "tasks"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "url_segment",
@@ -5575,6 +5563,114 @@
           {
             "method": "POST",
             "path": "/tasks",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "url_segment",
+            "location": "task_gid"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependencies"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependents"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependencies"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependents"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "url_segment",
+            "location": "task_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependencies"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.dependents"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.parent"
           },
@@ -5589,102 +5685,6 @@
             "path": "/tasks/{task_gid}",
             "kind": "url_segment",
             "location": "task_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "url_segment",
-            "location": "tasks"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "url_segment",
-            "location": "task_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependencies"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependents"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "url_segment",
-            "location": "tasks"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "url_segment",
-            "location": "task_gid"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependencies"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependents"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependencies"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.dependents"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.parent"
           },
           {
             "method": "POST",
@@ -5753,24 +5753,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/subtasks",
-            "kind": "url_segment",
-            "location": "tasks"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/subtasks",
-            "kind": "url_segment",
-            "location": "task_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/subtasks",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "url_segment",
@@ -5829,6 +5811,24 @@
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "property",
             "location": "data.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/subtasks",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/subtasks",
+            "kind": "url_segment",
+            "location": "task_gid"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/subtasks",
+            "kind": "property",
+            "location": "data"
           },
           {
             "method": "POST",
@@ -6155,18 +6155,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/time_tracking_entries",
-            "kind": "url_segment",
-            "location": "tasks"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/time_tracking_entries",
-            "kind": "url_segment",
-            "location": "task_gid"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "url_segment",
@@ -6183,22 +6171,22 @@
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.task"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/time_tracking_entries",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/time_tracking_entries",
+            "kind": "url_segment",
+            "location": "task_gid"
           }
         ],
         "users": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -6290,51 +6278,15 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks",
             "kind": "property",
             "location": "data.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assigned_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.completed_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.hearts.user"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.custom_fields.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.custom_fields.people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.followers"
           },
           {
             "method": "PUT",
@@ -6416,6 +6368,54 @@
           },
           {
             "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.followers"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assigned_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.completed_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.hearts.user"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.custom_fields.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.custom_fields.people_value"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.followers"
@@ -6451,12 +6451,6 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/subtasks",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "property",
@@ -6539,6 +6533,12 @@
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "property",
             "location": "data.followers"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/subtasks",
+            "kind": "property",
+            "location": "data.created_by"
           },
           {
             "method": "POST",
@@ -6763,12 +6763,6 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/time_tracking_entries",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
@@ -6779,16 +6773,16 @@
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.task.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/time_tracking_entries",
+            "kind": "property",
+            "location": "data.created_by"
           }
         ],
         "projects": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "project"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -6820,36 +6814,42 @@
           },
           {
             "method": "GET",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.projects"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.project"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.projects"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.memberships.project"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.project"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.projects"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.project"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.projects"
@@ -6957,13 +6957,13 @@
             "location": "data.projects"
           },
           {
-            "method": "GET",
+            "method": "POST",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.attributable_to"
           },
           {
-            "method": "POST",
+            "method": "GET",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.attributable_to"
@@ -6971,12 +6971,6 @@
         ],
         "sections": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "section"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -7002,30 +6996,36 @@
           },
           {
             "method": "GET",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.memberships.section"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assignee_section"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.memberships.section"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assignee_section"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.section"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.memberships.section"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.assignee_section"
@@ -7117,12 +7117,6 @@
         ],
         "workspaces": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -7142,9 +7136,9 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/tasks",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -7154,6 +7148,12 @@
           },
           {
             "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.workspace"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.workspace"
@@ -7233,19 +7233,19 @@
             "location": "data.tags"
           },
           {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.tags"
+          },
+          {
+            "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.tags"
+          },
+          {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.tags"
-          },
-          {
-            "method": "PUT",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.tags"
-          },
-          {
-            "method": "PUT",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.tags"
@@ -7315,12 +7315,6 @@
       "incoming_references": {
         "_unresolved_": [
           {
-            "method": "GET",
-            "path": "/access_requests",
-            "kind": "property",
-            "location": "data.target"
-          },
-          {
             "method": "POST",
             "path": "/access_requests",
             "kind": "property",
@@ -7334,9 +7328,9 @@
           },
           {
             "method": "GET",
-            "path": "/allocations/{allocation_gid}",
+            "path": "/access_requests",
             "kind": "property",
-            "location": "data.parent"
+            "location": "data.target"
           },
           {
             "method": "PUT",
@@ -7352,13 +7346,7 @@
           },
           {
             "method": "GET",
-            "path": "/allocations",
-            "kind": "query",
-            "location": "parent"
-          },
-          {
-            "method": "GET",
-            "path": "/allocations",
+            "path": "/allocations/{allocation_gid}",
             "kind": "property",
             "location": "data.parent"
           },
@@ -7376,6 +7364,18 @@
           },
           {
             "method": "POST",
+            "path": "/allocations",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/allocations",
+            "kind": "query",
+            "location": "parent"
+          },
+          {
+            "method": "GET",
             "path": "/allocations",
             "kind": "property",
             "location": "data.parent"
@@ -7387,12 +7387,6 @@
             "location": "data.parent"
           },
           {
-            "method": "GET",
-            "path": "/attachments",
-            "kind": "query",
-            "location": "parent"
-          },
-          {
             "method": "POST",
             "path": "/attachments",
             "kind": "query",
@@ -7412,15 +7406,9 @@
           },
           {
             "method": "GET",
-            "path": "/budgets",
+            "path": "/attachments",
             "kind": "query",
             "location": "parent"
-          },
-          {
-            "method": "GET",
-            "path": "/budgets",
-            "kind": "property",
-            "location": "data.parent"
           },
           {
             "method": "POST",
@@ -7442,7 +7430,13 @@
           },
           {
             "method": "GET",
-            "path": "/budgets/{budget_gid}",
+            "path": "/budgets",
+            "kind": "query",
+            "location": "parent"
+          },
+          {
+            "method": "GET",
+            "path": "/budgets",
             "kind": "property",
             "location": "data.parent"
           },
@@ -7454,6 +7448,12 @@
           },
           {
             "method": "PUT",
+            "path": "/budgets/{budget_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
             "path": "/budgets/{budget_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -7483,12 +7483,6 @@
             "location": "data.parent"
           },
           {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
             "method": "PUT",
             "path": "/goals/{goal_gid}",
             "kind": "property",
@@ -7496,9 +7490,9 @@
           },
           {
             "method": "GET",
-            "path": "/goals",
-            "kind": "query",
-            "location": "task"
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
           },
           {
             "method": "POST",
@@ -7511,6 +7505,12 @@
             "path": "/goals",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "GET",
+            "path": "/goals",
+            "kind": "query",
+            "location": "task"
           },
           {
             "method": "POST",
@@ -7549,18 +7549,6 @@
             "location": "data.new_task"
           },
           {
-            "method": "GET",
-            "path": "/memberships",
-            "kind": "query",
-            "location": "parent"
-          },
-          {
-            "method": "GET",
-            "path": "/memberships",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
             "method": "POST",
             "path": "/memberships",
             "kind": "query",
@@ -7580,12 +7568,24 @@
           },
           {
             "method": "GET",
-            "path": "/memberships/{membership_gid}",
+            "path": "/memberships",
+            "kind": "query",
+            "location": "parent"
+          },
+          {
+            "method": "GET",
+            "path": "/memberships",
             "kind": "property",
             "location": "data.parent"
           },
           {
             "method": "PUT",
+            "path": "/memberships/{membership_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
             "path": "/memberships/{membership_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -7597,13 +7597,13 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -7645,18 +7645,6 @@
             "location": "data.new_task"
           },
           {
-            "method": "GET",
-            "path": "/rates",
-            "kind": "query",
-            "location": "parent"
-          },
-          {
-            "method": "GET",
-            "path": "/rates",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
             "method": "POST",
             "path": "/rates",
             "kind": "query",
@@ -7676,12 +7664,24 @@
           },
           {
             "method": "GET",
-            "path": "/rates/{rate_gid}",
+            "path": "/rates",
+            "kind": "query",
+            "location": "parent"
+          },
+          {
+            "method": "GET",
+            "path": "/rates",
             "kind": "property",
             "location": "data.parent"
           },
           {
             "method": "PUT",
+            "path": "/rates/{rate_gid}",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "GET",
             "path": "/rates/{rate_gid}",
             "kind": "property",
             "location": "data.parent"
@@ -7699,28 +7699,28 @@
             "location": "data.parent"
           },
           {
+            "method": "POST",
+            "path": "/status_updates",
+            "kind": "query",
+            "location": "parent"
+          },
+          {
+            "method": "POST",
+            "path": "/status_updates",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
+            "method": "POST",
+            "path": "/status_updates",
+            "kind": "property",
+            "location": "data.parent"
+          },
+          {
             "method": "GET",
             "path": "/status_updates",
             "kind": "query",
             "location": "parent"
-          },
-          {
-            "method": "POST",
-            "path": "/status_updates",
-            "kind": "query",
-            "location": "parent"
-          },
-          {
-            "method": "POST",
-            "path": "/status_updates",
-            "kind": "property",
-            "location": "data.parent"
-          },
-          {
-            "method": "POST",
-            "path": "/status_updates",
-            "kind": "property",
-            "location": "data.parent"
           },
           {
             "method": "GET",
@@ -7747,13 +7747,13 @@
             "location": "data.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.task"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.task"
@@ -7765,12 +7765,6 @@
             "location": "task"
           },
           {
-            "method": "GET",
-            "path": "/webhooks",
-            "kind": "property",
-            "location": "data.target"
-          },
-          {
             "method": "POST",
             "path": "/webhooks",
             "kind": "property",
@@ -7784,12 +7778,18 @@
           },
           {
             "method": "GET",
-            "path": "/webhooks/{webhook_gid}",
+            "path": "/webhooks",
             "kind": "property",
             "location": "data.target"
           },
           {
             "method": "PUT",
+            "path": "/webhooks/{webhook_gid}",
+            "kind": "property",
+            "location": "data.target"
+          },
+          {
+            "method": "GET",
             "path": "/webhooks/{webhook_gid}",
             "kind": "property",
             "location": "data.target"
@@ -7821,19 +7821,19 @@
             "location": "data.custom_field_settings.parent"
           },
           {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
+            "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.parent"
+          },
+          {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.parent"
-          },
-          {
-            "method": "PUT",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -7931,13 +7931,13 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -7953,36 +7953,6 @@
         ],
         "stories": [
           {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.task"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.duplicate_of"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.duplicated_from"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.dependency"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.target"
-          },
-          {
             "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
@@ -8014,15 +7984,33 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "url_segment",
-            "location": "tasks"
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.task"
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
-            "kind": "url_segment",
-            "location": "task_gid"
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.duplicate_of"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.duplicated_from"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.dependency"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.target"
           },
           {
             "method": "POST",
@@ -8065,6 +8053,18 @@
             "path": "/tasks/{task_gid}/stories",
             "kind": "property",
             "location": "data.target"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/stories",
+            "kind": "url_segment",
+            "location": "tasks"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/stories",
+            "kind": "url_segment",
+            "location": "task_gid"
           },
           {
             "method": "POST",
@@ -8442,24 +8442,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/teams/{team_gid}",
-            "kind": "url_segment",
-            "location": "teams"
-          },
-          {
-            "method": "GET",
-            "path": "/teams/{team_gid}",
-            "kind": "url_segment",
-            "location": "team_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/teams/{team_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "url_segment",
@@ -8479,6 +8461,24 @@
           },
           {
             "method": "PUT",
+            "path": "/teams/{team_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}",
+            "kind": "url_segment",
+            "location": "teams"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}",
+            "kind": "url_segment",
+            "location": "team_gid"
+          },
+          {
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data"
@@ -8564,25 +8564,25 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.project"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -8602,13 +8602,13 @@
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.parent"
@@ -8646,25 +8646,25 @@
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
@@ -8708,13 +8708,13 @@
             "location": "data.organization"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.organization"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.organization"
@@ -8736,12 +8736,6 @@
       "incoming_references": {
         "_unresolved_": [
           {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.team"
-          },
-          {
             "method": "PUT",
             "path": "/goals/{goal_gid}",
             "kind": "property",
@@ -8755,9 +8749,9 @@
           },
           {
             "method": "GET",
-            "path": "/goals",
-            "kind": "query",
-            "location": "team"
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.team"
           },
           {
             "method": "POST",
@@ -8776,6 +8770,12 @@
             "path": "/goals",
             "kind": "property",
             "location": "data.team"
+          },
+          {
+            "method": "GET",
+            "path": "/goals",
+            "kind": "query",
+            "location": "team"
           },
           {
             "method": "POST",
@@ -8834,12 +8834,6 @@
         ],
         "projects": [
           {
-            "method": "GET",
-            "path": "/projects",
-            "kind": "query",
-            "location": "team"
-          },
-          {
             "method": "POST",
             "path": "/projects",
             "kind": "query",
@@ -8859,9 +8853,9 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.team"
+            "path": "/projects",
+            "kind": "query",
+            "location": "team"
           },
           {
             "method": "PUT",
@@ -8871,6 +8865,12 @@
           },
           {
             "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.team"
+          },
+          {
+            "method": "GET",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.team"
@@ -8882,18 +8882,6 @@
             "location": "data.team"
           },
           {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "url_segment",
-            "location": "teams"
-          },
-          {
-            "method": "GET",
-            "path": "/teams/{team_gid}/projects",
-            "kind": "url_segment",
-            "location": "team_gid"
-          },
-          {
             "method": "POST",
             "path": "/teams/{team_gid}/projects",
             "kind": "url_segment",
@@ -8916,6 +8904,18 @@
             "path": "/teams/{team_gid}/projects",
             "kind": "property",
             "location": "data.team"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "url_segment",
+            "location": "teams"
+          },
+          {
+            "method": "GET",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "url_segment",
+            "location": "team_gid"
           },
           {
             "method": "POST",
@@ -9204,24 +9204,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/users/{user_gid}",
-            "kind": "url_segment",
-            "location": "users"
-          },
-          {
-            "method": "GET",
-            "path": "/users/{user_gid}",
-            "kind": "url_segment",
-            "location": "user_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/users/{user_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "PUT",
             "path": "/users/{user_gid}",
             "kind": "url_segment",
@@ -9241,6 +9223,24 @@
           },
           {
             "method": "PUT",
+            "path": "/users/{user_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/users/{user_gid}",
+            "kind": "url_segment",
+            "location": "users"
+          },
+          {
+            "method": "GET",
+            "path": "/users/{user_gid}",
+            "kind": "url_segment",
+            "location": "user_gid"
+          },
+          {
+            "method": "GET",
             "path": "/users/{user_gid}",
             "kind": "property",
             "location": "data"
@@ -9282,24 +9282,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
-            "kind": "url_segment",
-            "location": "users"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
-            "kind": "url_segment",
-            "location": "user_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
@@ -9319,6 +9301,24 @@
           },
           {
             "method": "PUT",
+            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
+            "kind": "url_segment",
+            "location": "users"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/users/{user_gid}",
+            "kind": "url_segment",
+            "location": "user_gid"
+          },
+          {
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "property",
             "location": "data"
@@ -9368,13 +9368,13 @@
             "location": "workspace"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
@@ -9398,37 +9398,37 @@
             "location": "workspace_gid"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspaces"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspace_gid"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspace_gid"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
@@ -9470,12 +9470,6 @@
       "incoming_references": {
         "_unresolved_": [
           {
-            "method": "GET",
-            "path": "/access_requests",
-            "kind": "property",
-            "location": "data.requester"
-          },
-          {
             "method": "POST",
             "path": "/access_requests",
             "kind": "property",
@@ -9483,15 +9477,9 @@
           },
           {
             "method": "GET",
-            "path": "/allocations/{allocation_gid}",
+            "path": "/access_requests",
             "kind": "property",
-            "location": "data.assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/allocations/{allocation_gid}",
-            "kind": "property",
-            "location": "data.created_by"
+            "location": "data.requester"
           },
           {
             "method": "PUT",
@@ -9513,19 +9501,13 @@
           },
           {
             "method": "GET",
-            "path": "/allocations",
-            "kind": "query",
-            "location": "assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/allocations",
+            "path": "/allocations/{allocation_gid}",
             "kind": "property",
             "location": "data.assignee"
           },
           {
             "method": "GET",
-            "path": "/allocations",
+            "path": "/allocations/{allocation_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
@@ -9549,6 +9531,24 @@
           },
           {
             "method": "POST",
+            "path": "/allocations",
+            "kind": "property",
+            "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/allocations",
+            "kind": "query",
+            "location": "assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/allocations",
+            "kind": "property",
+            "location": "data.assignee"
+          },
+          {
+            "method": "GET",
             "path": "/allocations",
             "kind": "property",
             "location": "data.created_by"
@@ -9602,25 +9602,25 @@
             "location": "data.people_value"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/custom_fields/{custom_field_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/custom_fields/{custom_field_gid}",
             "kind": "property",
             "location": "data.people_value"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/custom_fields/{custom_field_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/custom_fields/{custom_field_gid}",
             "kind": "property",
             "location": "data.people_value"
@@ -9632,19 +9632,19 @@
             "location": "data.user"
           },
           {
+            "method": "PUT",
+            "path": "/goal_relationships/{goal_relationship_gid}",
+            "kind": "property",
+            "location": "data.supported_goal.owner"
+          },
+          {
+            "method": "PUT",
+            "path": "/goal_relationships/{goal_relationship_gid}",
+            "kind": "property",
+            "location": "data.supported_goal.owner"
+          },
+          {
             "method": "GET",
-            "path": "/goal_relationships/{goal_relationship_gid}",
-            "kind": "property",
-            "location": "data.supported_goal.owner"
-          },
-          {
-            "method": "PUT",
-            "path": "/goal_relationships/{goal_relationship_gid}",
-            "kind": "property",
-            "location": "data.supported_goal.owner"
-          },
-          {
-            "method": "PUT",
             "path": "/goal_relationships/{goal_relationship_gid}",
             "kind": "property",
             "location": "data.supported_goal.owner"
@@ -9656,36 +9656,6 @@
             "location": "data.supported_goal.owner"
           },
           {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.likes.user"
-          },
-          {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.followers"
-          },
-          {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.owner"
-          },
-          {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.people_value"
-          },
-          {
             "method": "PUT",
             "path": "/goals/{goal_gid}",
             "kind": "property",
@@ -9723,9 +9693,33 @@
           },
           {
             "method": "GET",
-            "path": "/goals",
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.likes.user"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.followers"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}",
             "kind": "property",
             "location": "data.owner"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
             "method": "POST",
@@ -9768,6 +9762,12 @@
             "path": "/goals",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/goals",
+            "kind": "property",
+            "location": "data.owner"
           },
           {
             "method": "POST",
@@ -9926,12 +9926,6 @@
             "location": "data.new_task.created_by"
           },
           {
-            "method": "GET",
-            "path": "/memberships",
-            "kind": "property",
-            "location": "data.parent.owner"
-          },
-          {
             "method": "POST",
             "path": "/memberships",
             "kind": "property",
@@ -9945,15 +9939,9 @@
           },
           {
             "method": "GET",
-            "path": "/memberships/{membership_gid}",
+            "path": "/memberships",
             "kind": "property",
             "location": "data.parent.owner"
-          },
-          {
-            "method": "GET",
-            "path": "/memberships/{membership_gid}",
-            "kind": "property",
-            "location": "data.user"
           },
           {
             "method": "PUT",
@@ -9969,15 +9957,15 @@
           },
           {
             "method": "GET",
-            "path": "/ooo_entries/{ooo_entry_gid}",
+            "path": "/memberships/{membership_gid}",
             "kind": "property",
-            "location": "data.user"
+            "location": "data.parent.owner"
           },
           {
             "method": "GET",
-            "path": "/ooo_entries/{ooo_entry_gid}",
+            "path": "/memberships/{membership_gid}",
             "kind": "property",
-            "location": "data.created_by"
+            "location": "data.user"
           },
           {
             "method": "PUT",
@@ -9993,19 +9981,13 @@
           },
           {
             "method": "GET",
-            "path": "/ooo_entries",
-            "kind": "query",
-            "location": "user"
-          },
-          {
-            "method": "GET",
-            "path": "/ooo_entries",
+            "path": "/ooo_entries/{ooo_entry_gid}",
             "kind": "property",
             "location": "data.user"
           },
           {
             "method": "GET",
-            "path": "/ooo_entries",
+            "path": "/ooo_entries/{ooo_entry_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
@@ -10029,6 +10011,24 @@
           },
           {
             "method": "POST",
+            "path": "/ooo_entries",
+            "kind": "property",
+            "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/ooo_entries",
+            "kind": "query",
+            "location": "user"
+          },
+          {
+            "method": "GET",
+            "path": "/ooo_entries",
+            "kind": "property",
+            "location": "data.user"
+          },
+          {
+            "method": "GET",
             "path": "/ooo_entries",
             "kind": "property",
             "location": "data.created_by"
@@ -10052,12 +10052,6 @@
             "location": "data.user"
           },
           {
-            "method": "GET",
-            "path": "/portfolios",
-            "kind": "query",
-            "location": "owner"
-          },
-          {
             "method": "POST",
             "path": "/portfolios",
             "kind": "query",
@@ -10095,60 +10089,66 @@
           },
           {
             "method": "GET",
+            "path": "/portfolios",
+            "kind": "query",
+            "location": "owner"
+          },
+          {
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.members"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.owner"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.members"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.owner"
@@ -10262,18 +10262,6 @@
             "location": "data.new_task.created_by"
           },
           {
-            "method": "GET",
-            "path": "/rates",
-            "kind": "property",
-            "location": "data.resource"
-          },
-          {
-            "method": "GET",
-            "path": "/rates",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/rates",
             "kind": "property",
@@ -10287,13 +10275,13 @@
           },
           {
             "method": "GET",
-            "path": "/rates/{rate_gid}",
+            "path": "/rates",
             "kind": "property",
             "location": "data.resource"
           },
           {
             "method": "GET",
-            "path": "/rates/{rate_gid}",
+            "path": "/rates",
             "kind": "property",
             "location": "data.created_by"
           },
@@ -10305,6 +10293,18 @@
           },
           {
             "method": "PUT",
+            "path": "/rates/{rate_gid}",
+            "kind": "property",
+            "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/rates/{rate_gid}",
+            "kind": "property",
+            "location": "data.resource"
+          },
+          {
+            "method": "GET",
             "path": "/rates/{rate_gid}",
             "kind": "property",
             "location": "data.created_by"
@@ -10394,25 +10394,25 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.task.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/time_tracking_entries/{time_tracking_entry_gid}",
             "kind": "property",
             "location": "data.task.created_by"
@@ -10430,12 +10430,6 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
-            "path": "/timesheet_approval_statuses/{timesheet_approval_status_gid}",
-            "kind": "property",
-            "location": "data.user"
-          },
-          {
             "method": "PUT",
             "path": "/timesheet_approval_statuses/{timesheet_approval_status_gid}",
             "kind": "property",
@@ -10443,30 +10437,36 @@
           },
           {
             "method": "GET",
+            "path": "/timesheet_approval_statuses/{timesheet_approval_status_gid}",
+            "kind": "property",
+            "location": "data.user"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "query",
+            "location": "user"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "property",
+            "location": "data.user"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "property",
+            "location": "data.user"
+          },
+          {
+            "method": "GET",
             "path": "/timesheet_approval_statuses",
             "kind": "query",
             "location": "user"
           },
           {
             "method": "GET",
-            "path": "/timesheet_approval_statuses",
-            "kind": "property",
-            "location": "data.user"
-          },
-          {
-            "method": "POST",
-            "path": "/timesheet_approval_statuses",
-            "kind": "query",
-            "location": "user"
-          },
-          {
-            "method": "POST",
-            "path": "/timesheet_approval_statuses",
-            "kind": "property",
-            "location": "data.user"
-          },
-          {
-            "method": "POST",
             "path": "/timesheet_approval_statuses",
             "kind": "property",
             "location": "data.user"
@@ -10606,54 +10606,6 @@
             "location": "data.owner"
           },
           {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.current_status.author"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.current_status.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.custom_field_settings.custom_field.people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.members"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.completed_by"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.followers"
-          },
-          {
-            "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.owner"
-          },
-          {
             "method": "PUT",
             "path": "/projects/{project_gid}",
             "kind": "property",
@@ -10739,6 +10691,54 @@
           },
           {
             "method": "PUT",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.owner"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.current_status.author"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.current_status.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.custom_field_settings.custom_field.people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.members"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.completed_by"
+          },
+          {
+            "method": "GET",
+            "path": "/projects/{project_gid}",
+            "kind": "property",
+            "location": "data.followers"
+          },
+          {
+            "method": "GET",
             "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.owner"
@@ -11184,25 +11184,25 @@
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.created_by"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.custom_field_settings.custom_field.people_value"
@@ -11284,54 +11284,6 @@
         ],
         "stories": [
           {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.hearts.user"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.story.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.follower"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.task.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.old_people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/stories/{story_gid}",
-            "kind": "property",
-            "location": "data.new_people_value"
-          },
-          {
             "method": "PUT",
             "path": "/stories/{story_gid}",
             "kind": "property",
@@ -11381,9 +11333,51 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}/stories",
+            "path": "/stories/{story_gid}",
             "kind": "property",
             "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.hearts.user"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.story.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.follower"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.task.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.old_people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/stories/{story_gid}",
+            "kind": "property",
+            "location": "data.new_people_value"
           },
           {
             "method": "POST",
@@ -11435,7 +11429,7 @@
           },
           {
             "method": "GET",
-            "path": "/goals/{goal_gid}/stories",
+            "path": "/tasks/{task_gid}/stories",
             "kind": "property",
             "location": "data.created_by"
           },
@@ -11486,6 +11480,12 @@
             "path": "/goals/{goal_gid}/stories",
             "kind": "property",
             "location": "data.new_people_value"
+          },
+          {
+            "method": "GET",
+            "path": "/goals/{goal_gid}/stories",
+            "kind": "property",
+            "location": "data.created_by"
           }
         ],
         "tags": [
@@ -11502,13 +11502,13 @@
             "location": "data.followers"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/tags/{tag_gid}",
             "kind": "property",
             "location": "data.followers"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/tags/{tag_gid}",
             "kind": "property",
             "location": "data.followers"
@@ -11528,18 +11528,6 @@
         ],
         "tasks": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -11631,51 +11619,15 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
+            "path": "/tasks",
+            "kind": "query",
+            "location": "assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks",
             "kind": "property",
             "location": "data.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assigned_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.completed_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.hearts.user"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.assignee"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.custom_fields.created_by"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.custom_fields.people_value"
-          },
-          {
-            "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.followers"
           },
           {
             "method": "PUT",
@@ -11757,6 +11709,54 @@
           },
           {
             "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.followers"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assigned_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.completed_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.hearts.user"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.assignee"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.custom_fields.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.custom_fields.people_value"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.followers"
@@ -11792,12 +11792,6 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/subtasks",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "property",
@@ -11880,6 +11874,12 @@
             "path": "/tasks/{task_gid}/subtasks",
             "kind": "property",
             "location": "data.followers"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/subtasks",
+            "kind": "property",
+            "location": "data.created_by"
           },
           {
             "method": "POST",
@@ -12104,12 +12104,6 @@
             "location": "data.created_by"
           },
           {
-            "method": "GET",
-            "path": "/tasks/{task_gid}/time_tracking_entries",
-            "kind": "property",
-            "location": "data.created_by"
-          },
-          {
             "method": "POST",
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
@@ -12120,6 +12114,12 @@
             "path": "/tasks/{task_gid}/time_tracking_entries",
             "kind": "property",
             "location": "data.task.created_by"
+          },
+          {
+            "method": "GET",
+            "path": "/tasks/{task_gid}/time_tracking_entries",
+            "kind": "property",
+            "location": "data.created_by"
           }
         ]
       }
@@ -12269,24 +12269,6 @@
             "location": "data"
           },
           {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}",
-            "kind": "url_segment",
-            "location": "workspaces"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}",
-            "kind": "url_segment",
-            "location": "workspace_gid"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}",
-            "kind": "property",
-            "location": "data"
-          },
-          {
             "method": "PUT",
             "path": "/workspaces/{workspace_gid}",
             "kind": "url_segment",
@@ -12306,6 +12288,24 @@
           },
           {
             "method": "PUT",
+            "path": "/workspaces/{workspace_gid}",
+            "kind": "property",
+            "location": "data"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}",
+            "kind": "url_segment",
+            "location": "workspaces"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}",
+            "kind": "url_segment",
+            "location": "workspace_gid"
+          },
+          {
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}",
             "kind": "property",
             "location": "data"
@@ -12403,13 +12403,13 @@
       "incoming_references": {
         "_unresolved_": [
           {
-            "method": "GET",
+            "method": "POST",
             "path": "/allocations",
             "kind": "query",
             "location": "workspace"
           },
           {
-            "method": "POST",
+            "method": "GET",
             "path": "/allocations",
             "kind": "query",
             "location": "workspace"
@@ -12433,12 +12433,6 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
-            "path": "/goals/{goal_gid}",
-            "kind": "property",
-            "location": "data.workspace"
-          },
-          {
             "method": "PUT",
             "path": "/goals/{goal_gid}",
             "kind": "property",
@@ -12452,9 +12446,9 @@
           },
           {
             "method": "GET",
-            "path": "/goals",
-            "kind": "query",
-            "location": "workspace"
+            "path": "/goals/{goal_gid}",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -12473,6 +12467,12 @@
             "path": "/goals",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/goals",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "POST",
@@ -12511,12 +12511,6 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
-            "path": "/memberships/{membership_gid}",
-            "kind": "property",
-            "location": "data.workspace"
-          },
-          {
             "method": "PUT",
             "path": "/memberships/{membership_gid}",
             "kind": "property",
@@ -12524,9 +12518,9 @@
           },
           {
             "method": "GET",
-            "path": "/ooo_entries",
-            "kind": "query",
-            "location": "workspace"
+            "path": "/memberships/{membership_gid}",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -12539,6 +12533,12 @@
             "path": "/ooo_entries",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/ooo_entries",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "POST",
@@ -12553,12 +12553,6 @@
             "location": "data.organization"
           },
           {
-            "method": "GET",
-            "path": "/portfolios",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/portfolios",
             "kind": "query",
@@ -12578,12 +12572,18 @@
           },
           {
             "method": "GET",
+            "path": "/portfolios",
+            "kind": "query",
+            "location": "workspace"
+          },
+          {
+            "method": "PUT",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.workspace"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/portfolios/{portfolio_gid}",
             "kind": "property",
             "location": "data.workspace"
@@ -12607,12 +12607,6 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
-            "path": "/roles",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/roles",
             "kind": "query",
@@ -12632,12 +12626,18 @@
           },
           {
             "method": "GET",
+            "path": "/roles",
+            "kind": "query",
+            "location": "workspace"
+          },
+          {
+            "method": "PUT",
             "path": "/roles/{role_gid}",
             "kind": "property",
             "location": "data.workspace"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/roles/{role_gid}",
             "kind": "property",
             "location": "data.workspace"
@@ -12655,12 +12655,6 @@
             "location": "workspace"
           },
           {
-            "method": "GET",
-            "path": "/time_tracking_categories",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/time_tracking_categories",
             "kind": "query",
@@ -12671,18 +12665,18 @@
             "path": "/time_tracking_categories",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/time_tracking_categories",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "GET",
             "path": "/time_tracking_entries",
             "kind": "query",
             "location": "workspace"
-          },
-          {
-            "method": "GET",
-            "path": "/timesheet_approval_statuses/{timesheet_approval_status_gid}",
-            "kind": "property",
-            "location": "data.workspace"
           },
           {
             "method": "PUT",
@@ -12692,30 +12686,36 @@
           },
           {
             "method": "GET",
+            "path": "/timesheet_approval_statuses/{timesheet_approval_status_gid}",
+            "kind": "property",
+            "location": "data.workspace"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "query",
+            "location": "workspace"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "property",
+            "location": "data.workspace"
+          },
+          {
+            "method": "POST",
+            "path": "/timesheet_approval_statuses",
+            "kind": "property",
+            "location": "data.workspace"
+          },
+          {
+            "method": "GET",
             "path": "/timesheet_approval_statuses",
             "kind": "query",
             "location": "workspace"
           },
           {
             "method": "GET",
-            "path": "/timesheet_approval_statuses",
-            "kind": "property",
-            "location": "data.workspace"
-          },
-          {
-            "method": "POST",
-            "path": "/timesheet_approval_statuses",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
-            "method": "POST",
-            "path": "/timesheet_approval_statuses",
-            "kind": "property",
-            "location": "data.workspace"
-          },
-          {
-            "method": "POST",
             "path": "/timesheet_approval_statuses",
             "kind": "property",
             "location": "data.workspace"
@@ -12727,13 +12727,13 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
+            "method": "POST",
             "path": "/webhooks",
             "kind": "query",
             "location": "workspace"
           },
           {
-            "method": "POST",
+            "method": "GET",
             "path": "/webhooks",
             "kind": "query",
             "location": "workspace"
@@ -12753,12 +12753,6 @@
         ],
         "projects": [
           {
-            "method": "GET",
-            "path": "/projects",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/projects",
             "kind": "query",
@@ -12778,9 +12772,9 @@
           },
           {
             "method": "GET",
-            "path": "/projects/{project_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/projects",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -12789,8 +12783,8 @@
             "location": "data.workspace"
           },
           {
-            "method": "POST",
-            "path": "/teams/{team_gid}/projects",
+            "method": "GET",
+            "path": "/projects/{project_gid}",
             "kind": "property",
             "location": "data.workspace"
           },
@@ -12801,16 +12795,10 @@
             "location": "data.workspace"
           },
           {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
-            "kind": "url_segment",
-            "location": "workspaces"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/projects",
-            "kind": "url_segment",
-            "location": "workspace_gid"
+            "method": "POST",
+            "path": "/teams/{team_gid}/projects",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -12835,6 +12823,18 @@
             "path": "/workspaces/{workspace_gid}/projects",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "url_segment",
+            "location": "workspaces"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/projects",
+            "kind": "url_segment",
+            "location": "workspace_gid"
           },
           {
             "method": "GET",
@@ -12887,12 +12887,6 @@
         ],
         "tags": [
           {
-            "method": "GET",
-            "path": "/tags",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/tags",
             "kind": "query",
@@ -12912,9 +12906,9 @@
           },
           {
             "method": "GET",
-            "path": "/tags/{tag_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/tags",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -12924,15 +12918,9 @@
           },
           {
             "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "url_segment",
-            "location": "workspaces"
-          },
-          {
-            "method": "GET",
-            "path": "/workspaces/{workspace_gid}/tags",
-            "kind": "url_segment",
-            "location": "workspace_gid"
+            "path": "/tags/{tag_gid}",
+            "kind": "property",
+            "location": "data.workspace"
           },
           {
             "method": "POST",
@@ -12951,16 +12939,22 @@
             "path": "/workspaces/{workspace_gid}/tags",
             "kind": "property",
             "location": "data.workspace"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "url_segment",
+            "location": "workspaces"
+          },
+          {
+            "method": "GET",
+            "path": "/workspaces/{workspace_gid}/tags",
+            "kind": "url_segment",
+            "location": "workspace_gid"
           }
         ],
         "tasks": [
           {
-            "method": "GET",
-            "path": "/tasks",
-            "kind": "query",
-            "location": "workspace"
-          },
-          {
             "method": "POST",
             "path": "/tasks",
             "kind": "query",
@@ -12980,9 +12974,9 @@
           },
           {
             "method": "GET",
-            "path": "/tasks/{task_gid}",
-            "kind": "property",
-            "location": "data.workspace"
+            "path": "/tasks",
+            "kind": "query",
+            "location": "workspace"
           },
           {
             "method": "PUT",
@@ -12992,6 +12986,12 @@
           },
           {
             "method": "PUT",
+            "path": "/tasks/{task_gid}",
+            "kind": "property",
+            "location": "data.workspace"
+          },
+          {
+            "method": "GET",
             "path": "/tasks/{task_gid}",
             "kind": "property",
             "location": "data.workspace"
@@ -13083,13 +13083,13 @@
             "location": "workspace"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
@@ -13113,37 +13113,37 @@
             "location": "workspace_gid"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspaces"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspace_gid"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspaces"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "url_segment",
             "location": "workspace_gid"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/workspaces/{workspace_gid}/users/{user_gid}",
             "kind": "property",
             "location": "data.workspaces"
@@ -13163,13 +13163,13 @@
             "location": "data.organization"
           },
           {
-            "method": "GET",
+            "method": "PUT",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.organization"
           },
           {
-            "method": "PUT",
+            "method": "GET",
             "path": "/teams/{team_gid}",
             "kind": "property",
             "location": "data.organization"

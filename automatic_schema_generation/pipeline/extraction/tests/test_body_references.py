@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pipeline.extraction.body_references import BodyReference, find_body_references
+from pipeline.extraction.endpoint_references import BodyReference, find_body_references
 
 
 def test_empty_operation_returns_nothing() -> None:
