@@ -4,10 +4,12 @@ Walks one OpenAPI operation and emits every place it touches a
 ``config.resources.aliases_lookup`` token. Four narrow walks are
 composed into a single per-endpoint record:
 
-* **Group A — path** (``find_path_references``): URL segments and
-  declared path parameters.
-* **Group B — parameter** (``find_parameter_references``): query /
-  header / cookie parameters declared on the path item or operation.
+* **Group A — URL segments** (``find_url_segment_references``): tokens
+  parsed from the URL string itself (``/tasks/{task_gid}`` → ``tasks``,
+  ``task_gid``). Independent of the spec's ``parameters`` array.
+* **Group B — parameters** (``find_parameter_references``): every entry
+  in the operation's declared ``parameters`` list — ``path``, ``query``,
+  ``header``, ``cookie``.
 * **Group C — property** (``find_property_references``): object
   property names and ``$ref``-into-bound-schema values, recursively.
 * **Group E — body** (``find_body_references``): top-level schema
@@ -15,7 +17,7 @@ composed into a single per-endpoint record:
 
 Each walk returns ``list[Reference]`` — a uniform shape with
 ``(resource, kind, location)``. ``kind`` discriminates the match site
-(``url_segment``, ``path_parameter``, ``query``, ``header``, ``cookie``,
+(``url_segment``, ``path``, ``query``, ``header``, ``cookie``,
 ``body_request``, ``body_response``, ``property``); ``location``
 carries the specific match (URL segment, parameter name, dotted
 property path, or ``"<media_type>:<schema_name>"`` for body refs).
@@ -44,7 +46,7 @@ _RESPONSE_PREFIX = "#/components/responses/"
 _HTTP_METHODS = frozenset({
     "get", "post", "put", "patch", "delete", "head", "options", "trace",
 })
-_PARAMETER_LOCATIONS = frozenset({"query", "header", "cookie"})
+_PARAMETER_LOCATIONS = frozenset({"path", "query"})
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +58,7 @@ _PARAMETER_LOCATIONS = frozenset({"query", "header", "cookie"})
 class Reference:
     """A single resource reference detected inside one endpoint.
 
-    ``kind`` is one of: ``url_segment``, ``path_parameter``, ``query``,
+    ``kind`` is one of: ``url_segment``, ``path``, ``query``,
     ``header``, ``cookie``, ``body_request``, ``body_response``,
     ``property``. ``location`` encodes the specific match site (URL
     segment, parameter name, dotted property path, or
@@ -77,20 +79,22 @@ class EndpointReferences:
 
 
 # ---------------------------------------------------------------------------
-# Group A — path references.
+# Group A — URL-segment references (parsed from the URL string itself).
 # ---------------------------------------------------------------------------
 
 
-def find_path_references(
+def find_url_segment_references(
     path: str,
-    path_item: dict[str, Any],
     config: PipelineConfig,
 ) -> list[Reference]:
-    """URL segments + declared path parameters that hit aliases_lookup.
+    """Tokens inferred from the URL string — independent of the spec.
 
-    Assumes config aliases are fully expanded at load time — the loader
-    produces every ``<alias>_<pk>`` form so a single whole-token lookup
-    is enough (no split fallback, no suffix stripping at walk time).
+    Walks ``path.split("/")``, strips ``{}`` brackets, and resolves each
+    segment against ``aliases_lookup``. This is how we learn that
+    ``/tasks/{task_gid}`` is "about tasks" even when the spec doesn't
+    declare ``tasks`` anywhere in its parameters list. Aliases are fully
+    expanded at config load time, so a single whole-token lookup
+    suffices (no split fallback, no suffix stripping at walk time).
     """
     aliases_lookup = config.resources.aliases_lookup
     candidates: list[tuple[str, str]] = []  # (token, kind)
@@ -100,19 +104,11 @@ def find_path_references(
         if stripped:
             candidates.append((stripped, "url_segment"))
 
-    for block in _parameter_blocks(path_item):
-        for parameter in block.get("parameters") or []:
-            if not isinstance(parameter, dict) or parameter.get("in") != "path":
-                continue
-            name = parameter.get("name")
-            if isinstance(name, str) and name:
-                candidates.append((name, "path_parameter"))
-
     return _dedup_resolve(candidates, aliases_lookup)
 
 
 # ---------------------------------------------------------------------------
-# Group B — parameter references (query / header / cookie).
+# Group B — declared-parameter references (path / query / header / cookie).
 # ---------------------------------------------------------------------------
 
 
@@ -120,7 +116,14 @@ def find_parameter_references(
     path_item: dict[str, Any],
     config: PipelineConfig,
 ) -> list[Reference]:
-    """Non-path parameter hits — the ones ``find_path_references`` skips.
+    """Hits in the operation's declared ``parameters`` array.
+
+    Covers every ``in`` location the spec declares — ``path`` /
+    ``query`` / ``header`` / ``cookie``. Path parameters live here too
+    (alongside query/header/cookie) because they share the same shape:
+    a ``parameters`` array entry with ``in``, ``name``, ``required``,
+    ``schema``. URL-segment-only inferences (paths whose pieces aren't
+    declared as parameters) come from ``find_url_segment_references``.
 
     ``$ref`` parameters (without a local ``name``) are silently skipped;
     resolving them into ``components.parameters`` is a later milestone.
@@ -304,7 +307,7 @@ def find_endpoint_references(
     operation: dict[str, Any] = path_item.get(method.lower()) or {}
 
     references: list[Reference] = []
-    references.extend(find_path_references(path, path_item, config))
+    references.extend(find_url_segment_references(path, config))
     references.extend(find_parameter_references(path_item, config))
     references.extend(find_body_references(operation, spec, bindings))
     component_schemas = (spec.get("components") or {}).get("schemas") or {}

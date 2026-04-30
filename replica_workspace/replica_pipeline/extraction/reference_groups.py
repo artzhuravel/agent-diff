@@ -36,7 +36,7 @@ _UNRESOLVED = "_unresolved_"
 class ReferenceEvidence:
     method: str
     path: str
-    kind: str       # "url_segment" | "path_parameter" | "query" | "header" | "cookie" | "body_request" | "body_response" | "property"
+    kind: str       # "url_segment" | "path" | "query" | "header" | "cookie" | "body_request" | "body_response" | "property"
     location: str   # token / parameter name / property path / media+schema
 
 
