@@ -16,9 +16,12 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    DDL,
     ForeignKey,
     LargeBinary,
     Index,
+    event,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -356,11 +359,23 @@ class Folder(Base):
         "User", foreign_keys=[owned_by_id], back_populates="owned_folders"
     )
 
-    # Indexes
+    # Indexes — the ``_trgm`` GIN indexes back the ILIKE-based
+    # ``search_content`` endpoint; pg_trgm extension is created by the
+    # ``before_create`` listener at the bottom of this module.
     __table_args__ = (
         Index("ix_box_folders_parent_name", "parent_id", "name"),
         Index("ix_box_folders_item_status", "item_status"),
         Index("ix_box_folders_status_parent", "item_status", "parent_id"),
+        Index(
+            "ix_box_folders_name_trgm", "name",
+            postgresql_using="gin",
+            postgresql_ops={"name": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_box_folders_description_trgm", "description",
+            postgresql_using="gin",
+            postgresql_ops={"description": "gin_trgm_ops"},
+        ),
     )
 
     def to_mini_dict(self) -> dict:
@@ -771,12 +786,22 @@ class File(Base):
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="file")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="item")
 
-    # Indexes
+    # Indexes — see Folder above for the trigram-index rationale.
     __table_args__ = (
         Index("ix_box_files_parent_name", "parent_id", "name"),
         Index("ix_box_files_item_status", "item_status"),
         Index("ix_box_files_status_parent", "item_status", "parent_id"),
         Index("ix_box_files_extension", "extension"),
+        Index(
+            "ix_box_files_name_trgm", "name",
+            postgresql_using="gin",
+            postgresql_ops={"name": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_box_files_description_trgm", "description",
+            postgresql_using="gin",
+            postgresql_ops={"description": "gin_trgm_ops"},
+        ),
     )
 
     def to_mini_dict(self) -> dict:
@@ -1538,3 +1563,86 @@ class HubItem(Base):
             "added_by": self.added_by.to_mini_dict() if self.added_by else None,
             "added_at": self.added_at.isoformat() if self.added_at else None,
         }
+
+
+# =============================================================================
+# Schema-level DDL — extensions + materialized-path triggers
+# =============================================================================
+#
+# These run as part of ``Base.metadata.create_all`` so every template the
+# seeder builds (one per JSON fixture, plus ``box_base``) gets the same
+# database-level affordances without any seeder-side knowledge.
+#
+# 1. ``pg_trgm`` extension — installed once per database. Required by the
+#    GIN trigram indexes declared in Folder/File ``__table_args__``, which
+#    accelerate the ILIKE search powering ``search_content``.
+#
+# 2. ``compute_box_path`` trigger function + per-table BEFORE INSERT
+#    triggers on ``box_folders`` and ``box_files``. The function
+#    materializes the slash-joined ancestor chain that runtime ancestry
+#    queries read off ``Folder.path`` / ``File.path``. With this trigger
+#    in place, neither the seeder nor application code needs to compute
+#    ``path`` itself — every INSERT lands with the correct value derived
+#    from ``parent_id``.
+
+# pg_trgm only needs to exist once per database; ``IF NOT EXISTS`` makes
+# it safe to run before each template's create_all.
+event.listen(
+    Base.metadata,
+    "before_create",
+    DDL("CREATE EXTENSION IF NOT EXISTS pg_trgm"),
+)
+
+
+def _install_path_triggers(target, connection, **_kw):
+    """Create the ``compute_box_path`` function and BEFORE INSERT triggers.
+
+    The function lives inside the same schema as the tables (we read the
+    schema from the connection's ``schema_translate_map`` — that's how the
+    seeder isolates per-template schemas like ``box_default``,
+    ``box_base``). Inside the function, lookups against ``box_folders``
+    use ``TG_TABLE_SCHEMA`` and a dynamic ``EXECUTE`` so the function works
+    no matter which template schema it runs in, regardless of search_path.
+    """
+    schema_map = connection.get_execution_options().get("schema_translate_map") or {}
+    schema = schema_map.get(None) or "public"
+    quoted = '"' + schema.replace('"', '""') + '"'
+
+    # Use ``text(...)`` rather than ``DDL(...)``: the function body
+    # contains a ``%I`` format specifier for PostgreSQL's ``format()``,
+    # which clashes with SQLAlchemy ``DDL``'s Python ``%`` substitution.
+    connection.execute(text(f"""
+CREATE OR REPLACE FUNCTION {quoted}.compute_box_path() RETURNS TRIGGER AS $func$
+DECLARE
+    parent_path text;
+BEGIN
+    -- Root row (no parent) → path is just "/"
+    IF NEW.parent_id IS NULL THEN
+        NEW.path := '/';
+        RETURN NEW;
+    END IF;
+    -- Look up the parent's path in the SAME schema as the inserted row.
+    EXECUTE format('SELECT path FROM %I.box_folders WHERE id = $1', TG_TABLE_SCHEMA)
+        INTO parent_path
+        USING NEW.parent_id;
+    IF parent_path IS NULL THEN
+        parent_path := '/';
+    END IF;
+    NEW.path := parent_path || NEW.parent_id || '/';
+    RETURN NEW;
+END;
+$func$ LANGUAGE plpgsql
+"""))
+    for table in ("box_folders", "box_files"):
+        trigger = f"{table}_compute_path"
+        connection.execute(text(
+            f'DROP TRIGGER IF EXISTS {trigger} ON {quoted}.{table}'
+        ))
+        connection.execute(text(
+            f"CREATE TRIGGER {trigger} "
+            f"BEFORE INSERT ON {quoted}.{table} "
+            f"FOR EACH ROW EXECUTE FUNCTION {quoted}.compute_box_path()"
+        ))
+
+
+event.listen(Base.metadata, "after_create", _install_path_triggers)

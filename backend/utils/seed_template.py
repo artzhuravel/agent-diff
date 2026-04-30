@@ -219,6 +219,64 @@ def _load_base_and_schema(app_slug: str):
     return base_mod.Base, schema_mod
 
 
+def _maybe_run_seed_hooks(app_slug: str, seed_data: dict[str, Any], Base) -> None:
+    """Run the app's optional pre-insert hook, if it ships one.
+
+    The hook lets an app mutate ``seed_data`` in place before the
+    insertion loop runs — typically to synthesize rows that JSON can't
+    carry directly. Box uses this to read binary file content from disk
+    and inject ``box_file_contents`` rows; other apps don't need a hook.
+
+    Contract: ``src.services.<app>.database.seed_hooks`` is optional.
+    If it exists and exports a callable ``before_insert(seed_data, Base)``,
+    we invoke it. Anything the hook raises propagates and rolls back the
+    template's transaction; that's intentional — a broken hook should
+    fail loudly, not silently produce a half-seeded template.
+    """
+    try:
+        hooks_mod = importlib.import_module(
+            f"src.services.{app_slug}.database.seed_hooks"
+        )
+    except ModuleNotFoundError:
+        return
+    hook = getattr(hooks_mod, "before_insert", None)
+    if hook is None:
+        return
+    hook(seed_data, Base)
+
+
+def _resolve_table_order(app_slug: str, Base) -> list[str]:
+    """Return the FK-safe insertion order for the app's tables.
+
+    Apps with FK cycles (e.g. Linear, where ``users``, ``teams``,
+    ``issues``, etc. mutually reference one another) cannot be ordered
+    by ``Base.metadata.sorted_tables`` — SQLAlchemy gives up on cycles
+    and falls back to a non-FK-safe order. Such apps ship a
+    ``TABLE_ORDER`` constant in their ``seed_hooks.py`` listing the
+    correct order; we honor it when present, otherwise we trust
+    ``sorted_tables``.
+    """
+    try:
+        hooks_mod = importlib.import_module(
+            f"src.services.{app_slug}.database.seed_hooks"
+        )
+    except ModuleNotFoundError:
+        hooks_mod = None
+    declared = getattr(hooks_mod, "TABLE_ORDER", None) if hooks_mod else None
+    if declared is not None:
+        # Trust the override but cross-check against the actual metadata
+        # so a stale list (table renamed / removed) fails loudly.
+        actual = {table.name for table in Base.metadata.tables.values()}
+        unknown = [name for name in declared if name not in actual]
+        if unknown:
+            raise ValueError(
+                f"seed_hooks.TABLE_ORDER for {app_slug!r} lists unknown "
+                f"tables: {unknown}. Update the list to match schema.py."
+            )
+        return list(declared)
+    return [table.name for table in Base.metadata.sorted_tables]
+
+
 # ---------------------------------------------------------------------------
 # Schema / table creation
 # ---------------------------------------------------------------------------
@@ -265,18 +323,21 @@ def insert_seed_data(
     schema_name: str,
     seed_data: dict[str, list[dict[str, Any]]],
     Base,
+    table_order: list[str] | None = None,
 ) -> None:
-    """Insert seed data in ``Base.metadata.sorted_tables`` (FK) order.
+    """Insert seed data in FK-safe order.
 
-    Table and column names are validated against the model metadata to
-    prevent injection through externally controlled keys.
+    ``table_order`` overrides the default ``Base.metadata.sorted_tables``
+    — apps with FK cycles supply their own. Table and column names are
+    validated against the model metadata to prevent injection through
+    externally controlled keys.
     """
     valid_columns_per_table = {
         t.name: {c.name for c in t.columns} for t in Base.metadata.tables.values()
     }
+    order = table_order or [t.name for t in Base.metadata.sorted_tables]
 
-    for table in Base.metadata.sorted_tables:
-        table_name = table.name
+    for table_name in order:
         records = seed_data.get(table_name)
         if not records:
             continue
@@ -383,7 +444,7 @@ def create_template(
     """
     print(f"\n=== Creating {template_name} ===")
 
-    sorted_table_names = [t.name for t in Base.metadata.sorted_tables]
+    table_order = _resolve_table_order(app_slug, Base)
 
     with engine.begin() as conn:
         create_schema(conn, template_name)
@@ -399,7 +460,8 @@ def create_template(
                 with open(seed_file) as f:
                     seed_data = json.load(f)
 
-                insert_seed_data(conn, template_name, seed_data, Base)
+                _maybe_run_seed_hooks(app_slug, seed_data, Base)
+                insert_seed_data(conn, template_name, seed_data, Base, table_order)
                 print(f"Loaded seed data from {seed_file.name}")
         else:
             print(f"Empty template {template_name} ready")
@@ -410,7 +472,7 @@ def create_template(
             name=template_name,
             location=template_name,
             description=description,
-            table_order=sorted_table_names,
+            table_order=table_order,
         )
         print(f"Registered public template: {template_name}")
 
