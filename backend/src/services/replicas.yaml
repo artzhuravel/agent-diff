@@ -13,7 +13,7 @@ rest:
   mount_path: /api/env/{env_id}/services/box/2.0
   routes_module: src.services.box.api.routes
   routes_attr: routes
-  seed_command: python utils/seed_box_template.py
+  seed_command: python utils/seed_template.py --app box
 - slug: asana
   mount_path: /api/env/{env_id}/services/asana
   routes_module: src.services.asana.api.routes
@@ -26,4 +26,4 @@ rest:
   seed_command: python utils/seed_template.py --app github
 graphql:
 - slug: linear
-  seed_command: python utils/seed_linear_template.py
+  seed_command: python utils/seed_template.py --app linear

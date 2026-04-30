@@ -252,3 +252,6 @@ experiments/kdd 2026
 # outputs from `prime eval run`
 ./outputs
 ./environments/*/outputs
+
+# Replica pipeline working artifacts — fully local, not pushed to GitHub.
+replica_workspace/apps/
