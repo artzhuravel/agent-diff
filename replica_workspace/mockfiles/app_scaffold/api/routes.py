@@ -20,10 +20,7 @@ from sqlalchemy.orm import Session
 
 from ..core.errors import (
     AppAPIError,
-    bad_request,
     handle_exception,
-    not_found,
-    unauthorized,
 )
 from ..database import operations as ops
 
@@ -31,13 +28,27 @@ from ..database import operations as ops
 # ---------------------------------------------------------------------------
 # Request helpers — universal across apps
 # ---------------------------------------------------------------------------
+#
+# These helpers raise ``AppAPIError`` (the base exception class in
+# ``core/errors.py``) rather than calling per-status constructors like
+# ``unauthorized()`` / ``bad_request()``. App-specific shapes vary across
+# replicas: some apps' constructors return ``AppAPIError`` instances (raise
+# safe), others return ``JSONResponse`` (raise breaks at runtime because
+# ``raise`` needs an ``Exception`` subclass). Raising ``AppAPIError``
+# directly is the one shape that's safe regardless of how the implement
+# stage chose to write the per-status constructors. ``handle_exception``
+# at the handler boundary converts the AppAPIError to the right
+# JSONResponse for the app.
 
 
 def _session(request: Request) -> Session:
     """Get the environment-scoped DB session from request.state."""
     session = getattr(request.state, "db_session", None)
     if session is None:
-        raise unauthorized("Missing database session")
+        raise AppAPIError(
+            message="Missing database session",
+            http_code=status.HTTP_401_UNAUTHORIZED,
+        )
     return session
 
 
@@ -46,15 +57,21 @@ def _principal_user_id(request: Request) -> str:
     principal = getattr(request.state, "impersonate_user_id", None)
     if principal is not None and str(principal).strip() != "":
         return str(principal)
-    raise unauthorized("Missing user authentication")
+    raise AppAPIError(
+        message="Missing user authentication",
+        http_code=status.HTTP_401_UNAUTHORIZED,
+    )
 
 
 async def _parse_json_body(request: Request) -> dict[str, Any]:
-    """Parse JSON body. Raises app-shaped bad_request on malformed input."""
+    """Parse JSON body. Raises an app-shaped 400 on malformed input."""
     try:
         return await request.json()
     except Exception as exc:
-        raise bad_request(f"Invalid JSON body: {exc}") from exc
+        raise AppAPIError(
+            message=f"Invalid JSON body: {exc}",
+            http_code=status.HTTP_400_BAD_REQUEST,
+        ) from exc
 
 
 def _pagination_params(request: Request) -> tuple[str | None, int]:

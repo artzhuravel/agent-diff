@@ -1,8 +1,14 @@
 """Per-endpoint reference extraction.
 
 Walks one OpenAPI operation and emits every place it touches a
-``config.resources.aliases_lookup`` token. Four narrow walks are
-composed into a single per-endpoint record:
+configured-resource alias. Two lookup tables are consulted:
+``name_variants_lookup`` for URL-subject inference (Group A and the
+rightmost-alias rule), and ``aliases_lookup`` (the union of name
+variants and property aliases) for everything else. The split keeps
+role words like ``assignee`` from leaking into URL subject inference
+while still letting them resolve at parameter and property sites.
+
+Four narrow walks are composed into a single per-endpoint record:
 
 * **Group A — URL segments** (``find_url_segment_references``): tokens
   parsed from the URL string itself (``/tasks/{task_gid}`` → ``tasks``,
@@ -24,7 +30,7 @@ property path, or ``"<media_type>:<schema_name>"`` for body refs).
 The composer (``find_endpoint_references``) runs all four against one
 operation and infers the operation's subject via the "rightmost URL
 alias" rule: walking URL segments right-to-left, the first token whose
-normalized form hits ``aliases_lookup`` is the subject.
+normalized form hits ``name_variants_lookup`` is the subject.
 
 Group D — schema bindings — is built once per spec and lives in
 ``schema_bindings.py``; it's passed in as ``bindings``.
@@ -90,13 +96,19 @@ def find_url_segment_references(
     """Tokens inferred from the URL string — independent of the spec.
 
     Walks ``path.split("/")``, strips ``{}`` brackets, and resolves each
-    segment against ``aliases_lookup``. This is how we learn that
-    ``/tasks/{task_gid}`` is "about tasks" even when the spec doesn't
-    declare ``tasks`` anywhere in its parameters list. Aliases are fully
-    expanded at config load time, so a single whole-token lookup
-    suffices (no split fallback, no suffix stripping at walk time).
+    segment against ``name_variants_lookup`` (NOT the broader
+    ``aliases_lookup``). This is how we learn that ``/tasks/{task_gid}``
+    is "about tasks" even when the spec doesn't declare ``tasks``
+    anywhere in its parameters list.
+
+    Using ``name_variants_lookup`` keeps role-word property aliases
+    (``assignee``, ``owner``, ``follower``) out of URL-subject inference
+    — a path like ``/members/{id}`` should not resolve to ``users`` just
+    because ``member`` is a property alias of ``users``. Group B
+    (``find_parameter_references``) still picks those up via the
+    declared ``parameters`` array using the union table.
     """
-    aliases_lookup = config.resources.aliases_lookup
+    name_variants_lookup = config.resources.name_variants_lookup
     candidates: list[tuple[str, str]] = []  # (token, kind)
 
     for segment in path.split("/"):
@@ -104,7 +116,7 @@ def find_url_segment_references(
         if stripped:
             candidates.append((stripped, "url_segment"))
 
-    return _dedup_resolve(candidates, aliases_lookup)
+    return _dedup_resolve(candidates, name_variants_lookup)
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +127,7 @@ def find_url_segment_references(
 def find_parameter_references(
     path_item: dict[str, Any],
     config: PipelineConfig,
+    context_resource: str | None = None,
 ) -> list[Reference]:
     """Hits in the operation's declared ``parameters`` array.
 
@@ -125,10 +138,14 @@ def find_parameter_references(
     ``schema``. URL-segment-only inferences (paths whose pieces aren't
     declared as parameters) come from ``find_url_segment_references``.
 
-    ``$ref`` parameters (without a local ``name``) are silently skipped;
-    resolving them into ``components.parameters`` is a later milestone.
+    Resolution uses the Path B context-aware resolver. The
+    ``context_resource`` argument should be the endpoint's URL subject
+    (computed by ``find_endpoint_references``); it disambiguates
+    parameters whose name matches a property_alias of multiple
+    resources. ``$ref`` parameters (without a local ``name``) are
+    silently skipped; resolving them into ``components.parameters`` is
+    a later milestone.
     """
-    aliases_lookup = config.resources.aliases_lookup
     candidates: list[tuple[str, str]] = []  # (token, kind)
 
     for block in _parameter_blocks(path_item):
@@ -142,7 +159,7 @@ def find_parameter_references(
             if isinstance(name, str) and name:
                 candidates.append((name, location))
 
-    return _dedup_resolve(candidates, aliases_lookup)
+    return _dedup_resolve_contextual(candidates, config, context_resource)
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +233,7 @@ def find_property_references(
     bindings: Mapping[str, str],
     component_schemas: Mapping[str, Any] | None = None,
     start_schema_name: str | None = None,
+    context_resource: str | None = None,
 ) -> list[Reference]:
     """Hits at object property nodes — by name and by ``$ref`` into a bound schema.
 
@@ -226,9 +244,18 @@ def find_property_references(
     ``start_schema_name`` to pre-seed visited so self-refs don't loop.
     Each emitted reference has ``kind="property"`` and
     ``location`` = the dotted property path.
+
+    Path B resolution: the ``context_resource`` argument seeds the
+    context for the outer schema. As the walker follows a ``$ref`` into
+    a target schema, the context updates to that target's Group D
+    binding (when bound) so that contextual property aliases resolve to
+    the right resource. A field named ``insert_after`` walked under
+    ``SectionRequest`` (bound to ``sections``) resolves to ``sections``;
+    walked under ``SectionTaskInsertRequest`` (bound to ``tasks``) it
+    resolves to ``tasks``.
     """
-    aliases_lookup = config.resources.aliases_lookup
     qualifier_prefixes = config.naming.qualifier_prefixes
+    resolver = config.resources.resolve_with_context
     schemas = component_schemas or {}
     visited: set[str] = {start_schema_name} if start_schema_name else set()
     seen: set[tuple[str, str]] = set()
@@ -242,18 +269,18 @@ def find_property_references(
         seen.add(key)
         references.append(Reference(resource, "property", location))
 
-    def resolve_name(name: str) -> str | None:
-        hit = aliases_lookup.get(normalize_identifier(name))
+    def resolve_name(name: str, context: str | None) -> str | None:
+        hit = resolver(normalize_identifier(name), context)
         if hit is not None:
             return hit
         for prefix in qualifier_prefixes:
             if name.startswith(prefix):
-                hit = aliases_lookup.get(normalize_identifier(name[len(prefix):]))
+                hit = resolver(normalize_identifier(name[len(prefix):]), context)
                 if hit is not None:
                     return hit
         return None
 
-    def walk(node: Any, path: tuple[str, ...]) -> None:
+    def walk(node: Any, path: tuple[str, ...], context: str | None) -> None:
         if not isinstance(node, dict):
             return
         ref_at_top = node.get("$ref")
@@ -266,28 +293,33 @@ def find_property_references(
                 target_schema = schemas.get(target_name)
                 if isinstance(target_schema, dict):
                     visited.add(target_name)
-                    walk(target_schema, path)
+                    # Update context to the target schema's binding when
+                    # one exists; otherwise keep the parent's context so
+                    # unbound nested schemas inherit their enclosing
+                    # resource's interpretation.
+                    inner_context = bindings.get(target_name) or context
+                    walk(target_schema, path, inner_context)
             return
         for name, child in (node.get("properties") or {}).items():
             if not isinstance(name, str):
                 continue
             child_path = path + (name,)
-            hit = resolve_name(name)
+            hit = resolve_name(name, context)
             if hit is not None:
                 record(hit, child_path)
             if isinstance(child, dict):
-                walk(child, child_path)
+                walk(child, child_path, context)
         items = node.get("items")
         if isinstance(items, dict):
-            walk(items, path)
+            walk(items, path, context)
         additional = node.get("additionalProperties")
         if isinstance(additional, dict):
-            walk(additional, path)
+            walk(additional, path, context)
         for key in ("allOf", "oneOf", "anyOf"):
             for branch in node.get(key) or []:
-                walk(branch, path)
+                walk(branch, path, context)
 
-    walk(schema, ())
+    walk(schema, (), context_resource)
     return references
 
 
@@ -306,27 +338,43 @@ def find_endpoint_references(
     path_item: dict[str, Any] = (spec.get("paths") or {}).get(path) or {}
     operation: dict[str, Any] = path_item.get(method.lower()) or {}
 
-    references: list[Reference] = []
-    references.extend(find_url_segment_references(path, config))
-    references.extend(find_parameter_references(path_item, config))
-    references.extend(find_body_references(operation, spec, bindings))
-    component_schemas = (spec.get("components") or {}).get("schemas") or {}
-    for schema in _iter_body_schemas(operation, spec):
-        references.extend(
-            find_property_references(schema, config, bindings, component_schemas)
-        )
-
+    # Compute the URL subject FIRST so it can seed the context for the
+    # parameter and property walks. Subject inference uses
+    # ``name_variants_lookup`` only — see the corresponding note on
+    # ``find_url_segment_references``. Property aliases (``assignee``,
+    # ``follower``) live in the union table but don't qualify as
+    # URL-subject markers; otherwise a ``/followers/...`` endpoint would
+    # mis-attribute to ``users``.
     subject: str | None = None
     subject_source = "no_alias_in_url"
-    aliases_lookup = config.resources.aliases_lookup
+    name_variants_lookup = config.resources.name_variants_lookup
     for segment in reversed(path.split("/")):
         stripped = segment.strip("{}")
         if not stripped:
             continue
-        resource = aliases_lookup.get(normalize_identifier(stripped))
+        resource = name_variants_lookup.get(normalize_identifier(stripped))
         if resource is not None:
             subject, subject_source = resource, "url_rightmost_alias"
             break
+
+    references: list[Reference] = []
+    references.extend(find_url_segment_references(path, config))
+    references.extend(
+        find_parameter_references(path_item, config, context_resource=subject)
+    )
+    references.extend(find_body_references(operation, spec, bindings))
+    component_schemas = (spec.get("components") or {}).get("schemas") or {}
+    for schema in _iter_body_schemas(operation, spec):
+        # Inline body schemas have no Group D binding of their own —
+        # seed their walk with the URL subject so contextual property
+        # aliases resolve correctly. The walker switches to the target
+        # schema's binding when it follows a ``$ref``.
+        references.extend(
+            find_property_references(
+                schema, config, bindings, component_schemas,
+                context_resource=subject,
+            )
+        )
 
     return EndpointReferences(
         method=method.upper(),
@@ -346,11 +394,46 @@ def _dedup_resolve(
     candidates: list[tuple[str, str]],
     aliases_lookup: Mapping[str, str],
 ) -> list[Reference]:
-    """Resolve each ``(token, kind)`` candidate to a ``Reference`` and drop dups."""
+    """Resolve each ``(token, kind)`` candidate via a strict lookup; drop dups.
+
+    Used by Group A (URL segments) where the lookup is
+    ``name_variants_lookup`` — strict, single-valued, no contextual
+    disambiguation needed.
+    """
     seen: set[tuple[str, str, str]] = set()
     out: list[Reference] = []
     for token, kind in candidates:
         resource = aliases_lookup.get(normalize_identifier(token))
+        if resource is None:
+            continue
+        key = (resource, kind, token)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(Reference(resource=resource, kind=kind, location=token))
+    return out
+
+
+def _dedup_resolve_contextual(
+    candidates: list[tuple[str, str]],
+    config: PipelineConfig,
+    context_resource: str | None,
+) -> list[Reference]:
+    """Resolve via the Path B contextual resolver; drop dups.
+
+    Used by Group B (parameters): a parameter named ``insert_after``
+    resolves to the resource that owns it via ``property_aliases``,
+    using the endpoint's URL subject as the disambiguating context.
+    Tokens that resolve to ``None`` (multi-owner property_aliases with
+    no context match) are dropped — better to omit a reference than to
+    guess a resource.
+    """
+    seen: set[tuple[str, str, str]] = set()
+    out: list[Reference] = []
+    for token, kind in candidates:
+        resource = config.resources.resolve_with_context(
+            normalize_identifier(token), context_resource,
+        )
         if resource is None:
             continue
         key = (resource, kind, token)

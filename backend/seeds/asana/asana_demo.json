@@ -1,0 +1,52 @@
+{
+  "asana_workspaces": [
+    {
+      "gid": "1100000000000001",
+      "resource_type": "workspace",
+      "name": "Acme Corp",
+      "email_domains": ["acme.com"],
+      "is_organization": true,
+      "is_deleted": false
+    }
+  ],
+  "asana_users": [
+    {
+      "gid": "1200000000000001",
+      "resource_type": "user",
+      "name": "Greg Sanchez",
+      "email": "greg@acme.com",
+      "photo": null,
+      "is_deleted": false
+    },
+    {
+      "gid": "1200000000000002",
+      "resource_type": "user",
+      "name": "Jin Park",
+      "email": "jin@acme.com",
+      "photo": null,
+      "is_deleted": false
+    },
+    {
+      "gid": "1200000000000003",
+      "resource_type": "user",
+      "name": "Maria Rodriguez",
+      "email": "maria@acme.com",
+      "photo": null,
+      "is_deleted": false
+    },
+    {
+      "gid": "1200000000000004",
+      "resource_type": "user",
+      "name": "Sam Chen",
+      "email": "sam@acme.com",
+      "photo": null,
+      "is_deleted": false
+    }
+  ],
+  "asana_user_workspaces": [
+    {"user_gid": "1200000000000001", "workspace_gid": "1100000000000001"},
+    {"user_gid": "1200000000000002", "workspace_gid": "1100000000000001"},
+    {"user_gid": "1200000000000003", "workspace_gid": "1100000000000001"},
+    {"user_gid": "1200000000000004", "workspace_gid": "1100000000000001"}
+  ]
+}

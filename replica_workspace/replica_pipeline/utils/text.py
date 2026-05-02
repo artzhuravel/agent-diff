@@ -102,3 +102,32 @@ def normalize_identifier(text: str) -> str:
     #    insertion already happened — if we lowercased first we'd
     #    lose the case information the boundary regex needs.
     return text.strip("_").lower()
+
+
+def canonical_forms(name: str) -> set[str]:
+    """Singular and plural forms of a snake_case canonical name.
+
+    Returns the canonical itself plus its naive singular and plural.
+    Used wherever the pipeline needs both ``user`` and ``users`` (or
+    ``story`` and ``stories``) regardless of which form the user
+    declared as canonical: schema-name token matching in the alias
+    suggester, the configure stage's match-token derivation, the
+    config loader's name_variants seeding, and the configure stage's
+    post-LLM auto-correction.
+
+    Pluralization rules are conservative — covering the regular
+    English forms (``user`` → ``users``, ``story`` → ``stories``,
+    ``box`` → ``boxes``) without trying to be a full inflector. APIs
+    that use irregular plurals (``person/people``) need explicit
+    aliases.
+    """
+    forms = {name}
+    if name.endswith("ies"):
+        forms.add(name[:-3] + "y")
+    elif name.endswith("sses") or name.endswith(("xes", "ches", "shes", "zes")):
+        forms.add(name[:-2])
+    elif name.endswith("s") and not name.endswith("ss"):
+        forms.add(name[:-1])
+    if not name.endswith("s"):
+        forms.add(name + "s")
+    return forms

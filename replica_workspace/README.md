@@ -190,9 +190,9 @@ After a successful build:
 | `examples/<slug>/testsuites/<slug>_docs/<slug>_api_full_docs.json` | Curated documentation of implemented endpoints. | Yes — committed; consumed by external tooling. |
 | `backend/seeds/<slug>/*.json` + PostgreSQL `<slug>_base`, `<slug>_default` schemas | Seeded test fixtures + their materialized DB schemas. | JSON committed; DB schemas exist until dropped. |
 | `apps/<slug>/pipeline_out/` | Pipeline working state: `endpoints.json`, `resources.json`, `responses.json`, `test_registry.json`, `test_results/`. | **Gitignored** — local-only. Test registry rebuilds on fresh clones via `register_tests`. |
-| `apps/<slug>/pipeline_prompts/` | Saved LLM prompts (dry-run output + `test_endpoints` audit trail). | **Gitignored** — debug-only. |
+| `apps/<slug>/prompts/` | Every LLM prompt the run dispatched, saved unconditionally. File names embed stage + target: `configure.md`, `suggest_aliases_<resource>.md`, `implement_responses.md`, `implement_<resource>_pass{1,2}.md`, `extend_<resource>_pass{1,2}.md`, `test_<resource>_batch<N>.md`. | **Gitignored** — debug + audit trail. |
 
-The replica code is the artifact. Everything in `pipeline_out/` and `pipeline_prompts/` is scaffolding that helps produce it.
+The replica code is the artifact. Everything in `pipeline_out/` and `prompts/` is scaffolding that helps produce it.
 
 ---
 
@@ -246,7 +246,7 @@ python -m replica_pipeline.build_replica apps/asana/app.yaml --dry-run
 python -m replica_pipeline.build_replica apps/asana/app.yaml --stage implement --dry-run
 ```
 
-Every stage that calls the LLM saves its prompt to `pipeline_prompts/` instead of invoking `claude -p`. Inspect, edit, re-run without `--dry-run` when satisfied.
+Every stage that calls the LLM saves its prompt to `prompts/` regardless of whether it's a real run or a dry-run. With `--dry-run` the LLM call itself is skipped; otherwise the prompt is saved first, the LLM is dispatched, and the file remains for inspection. Filenames carry the stage and the target — e.g. `implement_tasks_pass1.md`, `suggest_aliases_users.md`.
 
 ### Run a single stage / a range
 
@@ -303,7 +303,7 @@ replica_workspace/
 │       ├── app.yaml                # the per-app config
 │       ├── inputs/                 # OpenAPI spec lives here
 │       ├── pipeline_out/           # gitignored — pipeline state
-│       └── pipeline_prompts/       # gitignored — saved LLM prompts
+│       └── prompts/                # gitignored — every LLM prompt, named by stage + target
 ├── open_api_schemas/               # raw, full-fidelity vendor specs
 ├── mockfiles/                      # test fixtures referenced by `mocks` field
 └── replica_pipeline/               # the orchestrator package (importable as ``replica_pipeline``)
@@ -360,7 +360,7 @@ replica_workspace/
 |---|---|
 | What does stage X do? | `replica_pipeline/<subpackage>/runner.py` for the stage runner; `replica_pipeline/prompts/<stage>.py` for its prompt. |
 | Why does `endpoints.json` have shape Y? | `replica_pipeline/documentation/builder.py:generate_endpoints_document`. |
-| What's the LLM going to see for endpoint Z? | `python -m replica_pipeline.build_replica apps/<slug>/app.yaml --stage <stage> --dry-run`, then look in `apps/<slug>/pipeline_prompts/`. |
+| What's the LLM going to see for endpoint Z? | Look in `apps/<slug>/prompts/` after any run — every prompt is saved unconditionally. Use `--dry-run` to populate the dir without dispatching the LLM. |
 | What's the test status of endpoint Z? | `apps/<slug>/pipeline_out/test_registry.json` (gitignored — runs locally). |
 | What does the replica expose? | `examples/<slug>/testsuites/<slug>_docs/<slug>_api_full_docs.json` — curated docs of implemented endpoints. |
 | What's *currently* implemented? | The same docs file, OR scan `backend/src/services/<slug>/api/routes.py` for `Route(...)` entries. |
@@ -377,7 +377,7 @@ Every stage runner takes a single `RunContext` argument. Adding a new orchestrat
 - model overrides (`configure_model`, `implement_model`, `test_model`)
 - testing knobs (`test_batch_size`, `test_max_iterations`, `test_force_retest`, `test_timeout`)
 - `all_endpoints_per_resource` (run.py only — implements every endpoint without needing `selected_endpoints`)
-- Two computed paths: `output_dir` (= `pipeline_out/`) and `prompt_dir` (= `pipeline_prompts/`).
+- Two computed paths: `output_dir` (= `pipeline_out/`) and `prompt_dir` (= `prompts/`).
 
 Stages don't share state directly — they read/write files in `output_dir`. That keeps individual stages runnable in isolation:
 

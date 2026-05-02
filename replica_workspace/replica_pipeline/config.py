@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from .utils.text import IDENTIFIER_PATTERN, normalize_identifier
+from .utils.text import IDENTIFIER_PATTERN, canonical_forms, normalize_identifier
 
 
 # ---------------------------------------------------------------------------
@@ -36,19 +36,89 @@ _DEFAULT_PK_FIELD_NAMES: tuple[str, ...] = ("id",)
 
 @dataclass(frozen=True)
 class ResourcesConfig:
-    """Closed-world resource definitions.
+    """Closed-world resource definitions, split across two tiers.
 
-    ``aliases_lookup``: alias → canonical (reverse map for O(1) token resolution).
-    ``aliases_by_resource``: canonical → frozenset of expanded aliases.
-    ``primary_keys_lookup``: canonical → PK column name.
+    Two tier-specific tables back the resolution logic the rest of the
+    pipeline uses:
 
-    Each alias is expanded with PK field names at load time so ``user``
-    yields ``user``, ``user_id``, ``user_node_id`` in the lookup.
+    * ``name_variants_lookup`` — schema/entity-name forms only. **Strict,
+      cross-resource unique.** Drives URL-subject inference (Group A
+      walks and the rightmost-alias rule in ``find_endpoint_references``).
+      The strictness is what protects endpoint-to-resource assignment:
+      a single URL token always resolves to a single resource.
+    * ``property_aliases_by_resource`` — role-word / field-name aliases.
+      **May overlap across resources** (Path B). The same alias can be a
+      property_alias of multiple resources because the same field name
+      can mean different things in different schemas (e.g. ``insert_after``
+      points at sections in ``SectionRequest`` but at tasks in
+      ``SectionTaskInsertRequest``). Resolution is contextual — see
+      ``resolve_with_context``.
+
+    Mixed-tier collisions (alias is name_variant of A and
+    property_alias of B for any A != B) are still rejected at load time:
+    a name_variant is a strict global claim, and another resource
+    can't simultaneously claim the same token as a property-level
+    alias.
+
+    Two convenience views are also provided for callers that don't
+    need contextual resolution:
+
+    * ``aliases_lookup`` — name_variants ∪ property_aliases that have
+      exactly one owner. Multi-owner property_aliases are excluded
+      (their resolution requires context). Useful for token-match
+      style scans (e.g. the alias suggester).
+    * ``aliases_by_resource`` — per-resource union of name_variants and
+      property_aliases. Useful for displays / cross-references where
+      tier doesn't matter.
+
+    PK suffixes (``_id``, ``_gid``, ``_node_id``) are expanded at load
+    time on whichever tier each base alias lives in: ``user`` (a name
+    variant) yields ``user``, ``user_id``, ``user_gid`` in
+    ``name_variants_by_resource``; ``assignee`` (a property alias)
+    yields the same forms in ``property_aliases_by_resource``.
     """
 
+    name_variants_lookup: Mapping[str, str]
+    name_variants_by_resource: Mapping[str, frozenset[str]]
+    property_aliases_by_resource: Mapping[str, frozenset[str]]
     aliases_lookup: Mapping[str, str]
     aliases_by_resource: Mapping[str, frozenset[str]]
     primary_keys_lookup: Mapping[str, str]
+
+    def resolve_with_context(
+        self,
+        alias: str,
+        context_resource: str | None,
+    ) -> str | None:
+        """Path B contextual resolver — name_variants strict, property aliases contextual.
+
+        Resolution order:
+
+        1. ``name_variants_lookup`` is consulted first; a strict hit
+           wins immediately because name_variants are globally unique.
+        2. If ``context_resource`` is provided and that resource claims
+           the alias as a ``property_alias``, it wins. This is how
+           overlapping property_aliases are disambiguated — the schema
+           being walked supplies the context, not the lookup.
+        3. As a context-free fallback, if exactly **one** resource
+           claims the alias via ``property_aliases``, it wins. Multi-
+           owner aliases without context resolve to ``None`` (caller
+           must drop the reference rather than guess).
+        """
+        nv = self.name_variants_lookup.get(alias)
+        if nv is not None:
+            return nv
+        if context_resource is not None:
+            if alias in self.property_aliases_by_resource.get(context_resource, frozenset()):
+                return context_resource
+        owners = [
+            resource
+            for resource, aliases in self.property_aliases_by_resource.items()
+            if alias in aliases
+        ]
+        if len(owners) == 1:
+            return owners[0]
+        return None
 
 
 @dataclass(frozen=True)
@@ -149,9 +219,11 @@ def load_config(config_path: Path) -> PipelineConfig:
             "canonical_name → {aliases, ...}"
         )
 
-    aliases_lookup: dict[str, str] = {}
-    aliases_by_resource: dict[str, frozenset[str]] = {}
+    name_variants_lookup: dict[str, str] = {}
+    name_variants_by_resource: dict[str, frozenset[str]] = {}
+    property_aliases_by_resource: dict[str, frozenset[str]] = {}
     primary_keys_lookup: dict[str, str] = {}
+    legacy_alias_resources: list[str] = []
 
     for canonical, resource_raw in resources_raw.items():
         if not isinstance(canonical, str) or not canonical:
@@ -174,13 +246,48 @@ def load_config(config_path: Path) -> PipelineConfig:
                 f"got {type(resource_raw).__name__}"
             )
 
-        aliases_raw = resource_raw.get("aliases") or []
-        if not isinstance(aliases_raw, list) or not all(
-            isinstance(alias, str) for alias in aliases_raw
+        # Read tier-specific fields and the legacy single-tier ``aliases:``.
+        # The two are mutually exclusive: mixing them is ambiguous and the
+        # loader rejects it loudly so the user picks one.
+        legacy_aliases_raw = resource_raw.get("aliases")
+        name_variants_raw = resource_raw.get("name_variants")
+        property_aliases_raw = resource_raw.get("property_aliases")
+
+        if legacy_aliases_raw is not None and (
+            name_variants_raw is not None or property_aliases_raw is not None
         ):
             raise ValueError(
-                f"app_config 'resources.{canonical}.aliases' must be a "
-                f"list of strings"
+                f"app_config 'resources.{canonical}': cannot mix legacy "
+                f"'aliases:' with 'name_variants:' / 'property_aliases:'. "
+                f"Pick one form — either the legacy single bag or the new "
+                f"two-tier split."
+            )
+
+        if legacy_aliases_raw is not None:
+            # Legacy mode: every entry is treated as URL-eligible. This
+            # preserves pre-#3 behavior verbatim, including the bias toward
+            # over-attribution that motivated the split.
+            name_variants_input = legacy_aliases_raw
+            property_aliases_input: list[str] = []
+            legacy_alias_resources.append(canonical)
+        else:
+            name_variants_input = name_variants_raw or []
+            property_aliases_input = property_aliases_raw or []
+
+        if not isinstance(name_variants_input, list) or not all(
+            isinstance(alias, str) for alias in name_variants_input
+        ):
+            field_name = "aliases" if legacy_aliases_raw is not None else "name_variants"
+            raise ValueError(
+                f"app_config 'resources.{canonical}.{field_name}' must be "
+                f"a list of strings"
+            )
+        if not isinstance(property_aliases_input, list) or not all(
+            isinstance(alias, str) for alias in property_aliases_input
+        ):
+            raise ValueError(
+                f"app_config 'resources.{canonical}.property_aliases' must "
+                f"be a list of strings"
             )
 
         default_primary_key = (
@@ -195,42 +302,147 @@ def load_config(config_path: Path) -> PipelineConfig:
                 f"non-empty string, got {primary_key!r}"
             )
 
-        base_aliases: set[str] = {canonical}
-        for alias in aliases_raw:
+        # Build the two base sets. The canonical's singular AND plural
+        # forms are seeded into name_variants automatically — both
+        # because URL inference needs them (``user_gid`` resolves only
+        # when ``user`` is in name_variants) AND because the
+        # per-resource configure prompt's "Existing setup" section
+        # reflects this state. Showing the LLM ``[user, users, ...]``
+        # already classified prevents it from re-classifying ``user``
+        # as a property_alias on subsequent runs. Property aliases that
+        # duplicate a name variant are silently coalesced into the
+        # name_variants tier — the broader privilege wins.
+        name_variants_base: set[str] = set(canonical_forms(canonical))
+        for alias in name_variants_input:
             normalized = normalize_identifier(alias)
             if not normalized:
+                field_name = "aliases" if legacy_aliases_raw is not None else "name_variants"
                 raise ValueError(
-                    f"app_config 'resources.{canonical}.aliases' "
+                    f"app_config 'resources.{canonical}.{field_name}' "
                     f"contains {alias!r}, which normalizes to an empty "
                     f"string — aliases must contain at least one letter"
                 )
-            base_aliases.add(normalized)
+            name_variants_base.add(normalized)
 
-        # Expand aliases with PK suffixes: user → user, user_id, user_node_id
+        property_aliases_base: set[str] = set()
+        for alias in property_aliases_input:
+            normalized = normalize_identifier(alias)
+            if not normalized:
+                raise ValueError(
+                    f"app_config 'resources.{canonical}.property_aliases' "
+                    f"contains {alias!r}, which normalizes to an empty "
+                    f"string — aliases must contain at least one letter"
+                )
+            property_aliases_base.add(normalized)
+        property_aliases_base -= name_variants_base
+
+        # Expand aliases with PK suffixes: user → user, user_id, user_node_id.
+        # Expansion runs on each tier independently so that, e.g., the
+        # PK-suffixed form of a property alias (``assignee_id``) also
+        # resolves to the right resource without leaking into URL-subject
+        # inference (which only consults ``name_variants_*``).
         pk_names: set[str] = set(naming.pk_field_names)
         pk_names.update(naming.self_id_fields)
         pk_names.add(primary_key)
-        aliases = set(base_aliases)
-        for alias in base_aliases:
-            if any(alias.endswith(f"_{pk_name}") for pk_name in pk_names):
-                continue
-            for pk_name in pk_names:
-                aliases.add(f"{alias}_{pk_name}")
 
-        for alias in aliases:
-            previous = aliases_lookup.get(alias)
+        def _expand_with_pk(base_set: set[str]) -> set[str]:
+            expanded = set(base_set)
+            for alias in base_set:
+                if any(alias.endswith(f"_{pk_name}") for pk_name in pk_names):
+                    continue
+                for pk_name in pk_names:
+                    expanded.add(f"{alias}_{pk_name}")
+            return expanded
+
+        name_variants_expanded = _expand_with_pk(name_variants_base)
+        property_aliases_expanded = _expand_with_pk(property_aliases_base)
+
+        # Tier-aware collision check.
+        #
+        # Name_variants are GLOBALLY strict: a single URL token may not
+        # resolve to two resources, otherwise endpoint subject inference
+        # becomes non-deterministic. We enforce that here as we go.
+        for alias in name_variants_expanded:
+            previous = name_variants_lookup.get(alias)
             if previous is not None and previous != canonical:
                 raise ValueError(
-                    f"alias {alias!r} appears in both 'resources.{previous}' "
-                    f"and 'resources.{canonical}' — each alias must map to "
-                    f"exactly one canonical resource"
+                    f"name_variant {alias!r} declared in both "
+                    f"'resources.{previous}.name_variants' and "
+                    f"'resources.{canonical}.name_variants' — entity-name "
+                    f"forms must point at exactly one resource"
                 )
-            aliases_lookup[alias] = canonical
+            name_variants_lookup[alias] = canonical
 
-        aliases_by_resource[canonical] = frozenset(aliases)
+        # Property_aliases are PER-RESOURCE: the same field name can mean
+        # different things in different schemas (Path B). Cross-resource
+        # overlap is allowed; resolution at walk time uses the schema's
+        # binding as context. The mixed-tier check (alias declared as
+        # name_variant of A and property_alias of B for any A != B) runs
+        # in a deferred pass after all resources have been processed,
+        # because we need the full ``name_variants_lookup`` to perform it.
+        property_aliases_by_resource[canonical] = frozenset(property_aliases_expanded)
+
+        name_variants_by_resource[canonical] = frozenset(name_variants_expanded)
         primary_keys_lookup[canonical] = primary_key
 
+    # Deferred mixed-tier check. A property_alias of resource R must not
+    # collide with a name_variant of a *different* resource: a name_variant
+    # is a strict global claim that the alias *names* an entity, and another
+    # resource can't simultaneously claim the same alias as a property-level
+    # role-word reference.
+    for canonical, property_aliases in property_aliases_by_resource.items():
+        for alias in property_aliases:
+            nv_owner = name_variants_lookup.get(alias)
+            if nv_owner is not None and nv_owner != canonical:
+                raise ValueError(
+                    f"alias {alias!r} declared as a property_alias of "
+                    f"'resources.{canonical}' AND a name_variant of "
+                    f"'resources.{nv_owner}' — name_variants are global "
+                    f"entity-name claims; another resource cannot use the "
+                    f"same alias as a property-level reference"
+                )
+
+    if legacy_alias_resources:
+        # One-shot stderr notice — this isn't a hard error and we don't want
+        # to depend on Python's warnings filter behaving sanely under CLI.
+        import sys
+        print(
+            f"[config] DEPRECATION: resources {legacy_alias_resources} use "
+            f"the legacy 'aliases:' field; migrate to 'name_variants:' + "
+            f"'property_aliases:' to take advantage of stricter URL-subject "
+            f"inference. The legacy field continues to work for now.",
+            file=sys.stderr,
+        )
+
+    # Build the legacy union views from the tier-specific tables. These
+    # exist for callers that don't need contextual resolution (alias
+    # suggesters, displays, audit code). Multi-owner property_aliases
+    # are excluded from ``aliases_lookup`` because they have no single
+    # answer without context — those callers should use
+    # ``resolve_with_context`` directly.
+    aliases_lookup: dict[str, str] = dict(name_variants_lookup)
+    property_alias_owners: dict[str, set[str]] = {}
+    for resource, aliases in property_aliases_by_resource.items():
+        for alias in aliases:
+            property_alias_owners.setdefault(alias, set()).add(resource)
+    for alias, owners in property_alias_owners.items():
+        if alias in aliases_lookup:
+            # name_variant already claimed this alias — name_variants always
+            # win in the legacy union view.
+            continue
+        if len(owners) == 1:
+            aliases_lookup[alias] = next(iter(owners))
+
+    aliases_by_resource: dict[str, frozenset[str]] = {
+        resource: name_variants_by_resource.get(resource, frozenset())
+        | property_aliases_by_resource.get(resource, frozenset())
+        for resource in name_variants_by_resource
+    }
+
     resources = ResourcesConfig(
+        name_variants_lookup=MappingProxyType(name_variants_lookup),
+        name_variants_by_resource=MappingProxyType(name_variants_by_resource),
+        property_aliases_by_resource=MappingProxyType(property_aliases_by_resource),
         aliases_lookup=MappingProxyType(aliases_lookup),
         aliases_by_resource=MappingProxyType(aliases_by_resource),
         primary_keys_lookup=MappingProxyType(primary_keys_lookup),

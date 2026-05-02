@@ -45,9 +45,19 @@ def suggest_aliases(
     spec: dict[str, Any],
     config: PipelineConfig,
 ) -> dict[str, list[Suggestion]]:
-    """Return ``{resource_name: [suggestion, ...]}`` sorted by ref_count desc."""
+    """Return ``{resource_name: [suggestion, ...]}`` sorted by ref_count desc.
+
+    Token resolution honors Path B: a token that hits a name_variant
+    points at exactly one resource (strict). A token that hits a
+    property_alias may point at multiple resources, and each gets its
+    own ``Suggestion`` for the LLM to verdict independently. This
+    matches the per-resource configure flow — the same candidate
+    schema can legitimately be reviewed under multiple resources when
+    its name tokens are contextual.
+    """
     bindings = build_schema_bindings(spec, config)
-    aliases_lookup = config.resources.aliases_lookup
+    name_variants_lookup = config.resources.name_variants_lookup
+    property_aliases_by_resource = config.resources.property_aliases_by_resource
     raw_schemas = (spec.get("components") or {}).get("schemas") or {}
     schemas: dict[str, Any] = raw_schemas if isinstance(raw_schemas, dict) else {}
 
@@ -63,19 +73,35 @@ def suggest_aliases(
         normalized = normalize_identifier(name)
         seen_resources: set[str] = set()
         for token in normalized.split("_"):
-            resource = aliases_lookup.get(token)
-            if resource is None or resource in seen_resources:
-                continue
-            seen_resources.add(resource)
-            groups.setdefault(resource, []).append(
-                Suggestion(
-                    schema_name=name,
-                    normalized=normalized,
-                    matched_token=token,
-                    target_resource=resource,
-                    ref_count=ref_counts[name],
+            # Name_variant hit — single owner, stop after recording.
+            nv_owner = name_variants_lookup.get(token)
+            if nv_owner is not None and nv_owner not in seen_resources:
+                seen_resources.add(nv_owner)
+                groups.setdefault(nv_owner, []).append(
+                    Suggestion(
+                        schema_name=name,
+                        normalized=normalized,
+                        matched_token=token,
+                        target_resource=nv_owner,
+                        ref_count=ref_counts[name],
+                    )
                 )
-            )
+                continue
+            # Property_alias hit — possibly multiple owners. Surface a
+            # candidate under EACH so per-resource review can verdict
+            # independently.
+            for owner, aliases in property_aliases_by_resource.items():
+                if token in aliases and owner not in seen_resources:
+                    seen_resources.add(owner)
+                    groups.setdefault(owner, []).append(
+                        Suggestion(
+                            schema_name=name,
+                            normalized=normalized,
+                            matched_token=token,
+                            target_resource=owner,
+                            ref_count=ref_counts[name],
+                        )
+                    )
 
     for resource in groups:
         groups[resource].sort(

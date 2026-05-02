@@ -1,14 +1,24 @@
 """Schema bindings (Group D).
 
 Binds each component schema to a canonical resource. A schema binds
-if (D1) its normalized name hits ``aliases_lookup``, (D2) its declared
-``title`` field normalizes to an alias — useful for specs that use
-opaque generated names but populate human-readable titles — or (D3) it
-is a pass-through to another schema via a top-level ``$ref`` or composes
-via ``allOf`` / ``oneOf`` / ``anyOf`` over already-bound schemas.
-``allOf`` propagates when branches that bind agree on one target
-(conflict aborts); ``oneOf`` / ``anyOf`` propagate only when every
-branch agrees. Chains resolve via a fixed-point loop.
+if (D1) its normalized name resolves via the Path B contextual resolver
+(``name_variants_lookup`` first, with a unique-owner fallback through
+``property_aliases``), (D2) its declared ``title`` field normalizes to
+an alias — useful for specs that use opaque generated names but
+populate human-readable titles — or (D3) it is a pass-through to
+another schema via a top-level ``$ref`` or composes via ``allOf`` /
+``oneOf`` / ``anyOf`` over already-bound schemas. ``allOf`` propagates
+when branches that bind agree on one target (conflict aborts);
+``oneOf`` / ``anyOf`` propagate only when every branch agrees. Chains
+resolve via a fixed-point loop.
+
+D1/D2 use ``resolve_with_context(alias, None)``: name_variants always
+win; property_aliases only resolve when exactly one resource claims
+them. Schemas whose name matches multi-owner property_aliases (e.g. a
+schema literally named ``InsertAfter`` if such existed) stay unbound,
+because their resource isn't determinable without endpoint-level
+context, and Group D produces a global mapping with no per-call
+context available.
 
 The output ``{schema_name: canonical_resource}`` map is consumed by
 the property walker (Group C) and the body-level walker (Group E).
@@ -28,7 +38,7 @@ def build_schema_bindings(
     spec: dict[str, Any],
     config: PipelineConfig,
 ) -> dict[str, str]:
-    aliases_lookup = config.resources.aliases_lookup
+    resolve = config.resources.resolve_with_context
     schemas = (spec.get("components") or {}).get("schemas") or {}
     if not isinstance(schemas, dict):
         return {}
@@ -37,7 +47,7 @@ def build_schema_bindings(
 
     # D1. Direct name hit on component schemas.
     for name in schemas:
-        resource = aliases_lookup.get(normalize_identifier(name))
+        resource = resolve(normalize_identifier(name), None)
         if resource is not None:
             bindings[name] = resource
 
@@ -50,7 +60,7 @@ def build_schema_bindings(
         title = schema.get("title")
         if not isinstance(title, str) or not title:
             continue
-        resource = aliases_lookup.get(normalize_identifier(title))
+        resource = resolve(normalize_identifier(title), None)
         if resource is not None:
             bindings[name] = resource
 

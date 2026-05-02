@@ -39,7 +39,10 @@ def run_suggest_aliases(ctx) -> None:
     cache_path = ctx.config_path.parent / "pipeline_cache" / "alias_review.json"
     llm_call = make_llm_call(model=ctx.configure_model)
     print(f"  Reviewing {total_candidates} candidates via {ctx.configure_model}...")
-    reviewed = review_suggestions(suggestions, spec, config, llm_call, cache_path=cache_path)
+    reviewed = review_suggestions(
+        suggestions, spec, config, llm_call,
+        cache_path=cache_path, prompt_dir=ctx.prompt_dir,
+    )
 
     new_aliases: dict[str, list[str]] = {}
     for resource, entries in reviewed.items():

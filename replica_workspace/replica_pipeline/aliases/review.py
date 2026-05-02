@@ -39,8 +39,16 @@ def review_suggestions(
     config: PipelineConfig,
     llm_call: Callable[[str], str],
     cache_path: Path | None = None,
+    prompt_dir: Path | None = None,
 ) -> dict[str, list[ReviewedSuggestion]]:
-    """Send each resource's candidates through the LLM, return verdicts."""
+    """Send each resource's candidates through the LLM, return verdicts.
+
+    When ``prompt_dir`` is given, every per-resource review prompt is
+    written to ``prompt_dir/suggest_aliases_<resource>.md`` before the
+    LLM is called, leaving an audit trail even when the run errors mid
+    way. Resources whose candidates are fully served by the cache emit
+    no LLM call and therefore no prompt file.
+    """
     raw_component_schemas = (spec.get("components") or {}).get("schemas") or {}
     component_schemas: dict[str, Any] = (
         raw_component_schemas if isinstance(raw_component_schemas, dict) else {}
@@ -61,6 +69,9 @@ def review_suggestions(
         new_verdicts: dict[str, tuple[str, str]] = {}
         if uncached:
             prompt = build_review_prompt(resource, config, uncached, component_schemas)
+            if prompt_dir is not None:
+                prompt_dir.mkdir(parents=True, exist_ok=True)
+                (prompt_dir / f"suggest_aliases_{resource}.md").write_text(prompt)
             response = llm_call(prompt)
             new_verdicts = _parse_response(response)
             for suggestion in uncached:

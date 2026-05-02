@@ -9,11 +9,35 @@ target_dir: ../../../backend/src/services/github
 # Keys are canonical resource names (snake_case, become table names).
 # Aliases are normalized on load — PascalCase/camelCase/kebab-case all work.
 # Override primary_key for non-id PKs (e.g. commits → sha).
+#
+# Aliases come in two tiers:
+#   - name_variants: schema/entity-name forms — used for URL-subject
+#     inference AND property/parameter resolution. Be strict: anything
+#     here will cause its URL form to attribute to this resource.
+#   - property_aliases: role words / field names whose VALUE is this
+#     resource — used only for property/parameter resolution, NEVER for
+#     URL-subject inference.
+#
+# The legacy single-bag ``aliases:`` field still works (treated as
+# name_variants) but emits a deprecation notice. Mixing legacy with the
+# tiered form is rejected.
 
 resources:
   users:
-    aliases:
+    name_variants:
       - user
+      - users
+      - simple_user
+      - simple-user
+      - private_user
+      - public_user
+      - simple_classroom_user
+      - user_role_assignment
+      - user_search_result_item
+      - webhooks_reviewers
+      - webhooks_user
+      - webhooks_user_mannequin
+    property_aliases:
       - owner
       - owners
       - author
@@ -39,19 +63,9 @@ resources:
       - following
       - username
       - login
-      - simple_user
-      - simple-user
-      - private_user
-      - public_user
-      - simple_classroom_user
-      - user_role_assignment
-      - user_search_result_item
-      - webhooks_reviewers
-      - webhooks_user
-      - webhooks_user_mannequin
 
   repos:
-    aliases:
+    name_variants:
       - repo
       - repository
       - repositories
@@ -68,7 +82,7 @@ resources:
       - webhooks_repositories_added
 
   pulls:
-    aliases:
+    name_variants:
       - pull
       - pull_request
       - pull_requests
@@ -81,14 +95,14 @@ resources:
       - webhooks_pull_request_5
 
   issues:
-    aliases:
+    name_variants:
       - issue
       - issue_search_result_item
       - webhooks_issue
       - webhooks_issue_2
 
   orgs:
-    aliases:
+    name_variants:
       - org
       - organization
       - organizations
@@ -99,13 +113,13 @@ resources:
       - team_organization
 
   gists:
-    aliases:
+    name_variants:
       - gist
       - base_gist
       - gist_simple
 
   teams:
-    aliases:
+    name_variants:
       - team
       - team_full
       - team_simple
@@ -113,7 +127,7 @@ resources:
       - webhooks_team_1
 
   commits:
-    aliases:
+    name_variants:
       - commit
       - code_scanning_analysis_commit_sha
       - commit_search_result_item
@@ -125,7 +139,7 @@ resources:
     primary_key: sha
 
   branches:
-    aliases:
+    name_variants:
       - branch
       - branch_protection
       - branch_restriction_policy

@@ -13,6 +13,7 @@ class Service(str, Enum):
     linear = "linear"
     calendar = "calendar"
     box = "box"
+    asana = "asana"
 
 
 class Visibility(str, Enum):

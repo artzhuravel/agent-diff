@@ -64,8 +64,16 @@ class RunContext:
 
     @property
     def prompt_dir(self) -> Path:
-        """``pipeline_prompts/`` next to ``app.yaml`` — saved LLM prompts (dry runs + audit trail)."""
-        return self.config_path.parent / "pipeline_prompts"
+        """``prompts/`` next to ``app.yaml`` — every LLM prompt is saved here.
+
+        Populated unconditionally (not only on ``--dry-run``) so any real
+        run leaves a complete audit trail. File names embed the stage
+        and target — e.g. ``implement_tasks_pass1.md``,
+        ``extend_users_pass2.md``, ``suggest_aliases_projects.md``,
+        ``test_users_batch1.md``, ``configure.md``,
+        ``implement_responses.md``.
+        """
+        return self.config_path.parent / "prompts"
 
 
 def add_stage_args(parser: argparse.ArgumentParser, stages: list[str]) -> None:

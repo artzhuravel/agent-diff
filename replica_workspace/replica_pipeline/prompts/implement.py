@@ -81,7 +81,9 @@ def build_pass1_prompt(
     placeholders.update({
         "BOUND_SCHEMAS": json.dumps(resource.get("bound_schemas") or {}, indent=2),
         "ENDPOINTS": _format_endpoints(resource, endpoints_doc, spec, endpoint_filter),
-        "REFERENCED_SCHEMAS": _format_referenced_schemas(resource, endpoints_doc),
+        "REFERENCED_SCHEMAS": _format_referenced_schemas(
+            resource, endpoints_doc, endpoint_filter=endpoint_filter,
+        ),
         "IMPLEMENTED_ERRORS": error_note,
     })
     return _fill_template(_PASS1_TEMPLATE, placeholders)
@@ -121,7 +123,9 @@ def build_extend_prompt(
         "BOUND_SCHEMAS": json.dumps(resource.get("bound_schemas") or {}, indent=2),
         "ENDPOINTS_TO_ADD": _format_endpoints(resource, endpoints_doc, spec, to_add),
         "ALREADY_IMPLEMENTED": _format_endpoint_list(already_implemented or set()),
-        "REFERENCED_SCHEMAS": _format_referenced_schemas(resource, endpoints_doc),
+        "REFERENCED_SCHEMAS": _format_referenced_schemas(
+            resource, endpoints_doc, endpoint_filter=to_add,
+        ),
         "IMPLEMENTED_ERRORS": error_note,
     })
     return _fill_template(_EXTEND_TEMPLATE, placeholders)
@@ -144,13 +148,35 @@ def build_pass2_prompt(
     endpoints_doc: dict[str, Any],
     config: PipelineConfig,
     spec: dict[str, Any] | None = None,
+    endpoint_filter: set[str] | None = None,
 ) -> str:
-    """Pass 2: FK columns, relationships, association tables."""
+    """Pass 2: FK columns, relationships, association tables.
+
+    Two scopes apply at different layers:
+
+    * **Relationship evidence** (``Related Resources`` section) is wide
+      by design — it includes outgoing references from any endpoint
+      attributed to this resource AND incoming references whose source
+      endpoint's subject is one of our declared resources or is
+      ``_unresolved_``. Selection-based filtering would erase real
+      relationships from view; relationship inference is structurally
+      independent of which endpoints the user chose to implement.
+    * **External-schema scoping** (``External Schemas`` section) still
+      uses ``endpoint_filter`` to bound the schema universe to schemas
+      reachable from selected endpoints. External schemas are
+      reference-only context, and showing every schema that mentions
+      the resource across a 245-endpoint spec is too much noise.
+    """
     resource, placeholders = _common_placeholders(resource_name, resources_doc, config)
     placeholders.update({
         "RELATIONSHIP_PATTERNS": _load_mock_patterns(),
-        "RELATED_RESOURCES": _format_related(resource, resources_doc, config),
-        "EXTERNAL_SCHEMAS": _format_external(resource_name, spec, config),
+        "RELATED_RESOURCES": _format_related(
+            resource, resources_doc, config, endpoints_doc=endpoints_doc,
+        ),
+        "EXTERNAL_SCHEMAS": _format_external(
+            resource_name, spec, config,
+            endpoints_doc=endpoints_doc, endpoint_filter=endpoint_filter,
+        ),
     })
     return _fill_template(_PASS2_TEMPLATE, placeholders)
 
@@ -297,8 +323,17 @@ def _resolve_param(parameter: dict[str, Any], spec: dict[str, Any] | None) -> di
 def _format_referenced_schemas(
     resource: dict[str, Any],
     endpoints_doc: dict[str, Any],
+    endpoint_filter: set[str] | None = None,
 ) -> str:
-    """Collect schemas referenced by this resource's endpoints but not in bound_schemas."""
+    """Collect schemas referenced by this resource's endpoints but not in bound_schemas.
+
+    ``endpoint_filter`` (when provided) restricts the seed set to the
+    user-selected endpoints — schemas reachable only from non-selected
+    endpoints (e.g. ``POST /sections/{section_gid}/addTask`` body shapes
+    when only basic CRUD was selected) stay out of the prompt. Without
+    the filter, every endpoint attributed to the resource contributes
+    seeds, which floods the LLM with structurally irrelevant material.
+    """
     bound_names = set((resource.get("bound_schemas") or {}).keys())
     all_schemas = endpoints_doc.get("schemas") or {}
     endpoints_block = endpoints_doc.get("endpoints") or {}
@@ -306,6 +341,8 @@ def _format_referenced_schemas(
 
     seeds: set[str] = set()
     for key in resource.get("endpoint_keys") or []:
+        if endpoint_filter is not None and key not in endpoint_filter:
+            continue
         entry = endpoints_block.get(key)
         if entry is None:
             continue
@@ -329,11 +366,64 @@ def _format_related(
     resource: dict[str, Any],
     resources_doc: dict[str, Any],
     config: PipelineConfig,
+    endpoints_doc: dict[str, Any] | None = None,
 ) -> str:
+    """Render the per-related-resource block for Pass 2.
+
+    Scope of evidence is intentionally **wider than the user's
+    ``selected_endpoints``**: relationship inference is structurally
+    independent of which endpoints the user picked to implement. The
+    bound schemas of a resource don't change based on the selection,
+    and a relationship that exists in the spec is real regardless of
+    whether the endpoint exhibiting it is being implemented in this
+    pass.
+
+    Filtering rules:
+
+    * **Outgoing** evidence is included unconditionally — by definition
+      the source endpoint's subject is the current resource, and we
+      want every place the resource's schemas reference others.
+    * **Incoming** evidence is filtered by the source endpoint's
+      ``subject``: kept if the subject is one of our declared resources
+      OR ``"_unresolved_"`` (utility / action endpoints whose URL
+      doesn't include a recognizable resource token). Unresolved-source
+      evidence is tagged inline as ``(unresolved subject)`` and the
+      prompt's preamble explains how to weight it. Evidence from
+      endpoints whose subject is some other (undeclared) resource is
+      dropped — that's noise from a part of the spec we haven't asked
+      the LLM to reason about.
+    """
     resource_name = resource.get("resource", "")
     resource_aliases = config.resources.aliases_by_resource.get(resource_name, frozenset())
+    declared_resources = set((resources_doc.get("resources") or {}).keys())
+
+    # Map "METHOD /path" → subject, used to filter incoming evidence.
+    endpoint_subjects: dict[str, str | None] = {}
+    if endpoints_doc is not None:
+        for key, entry in (endpoints_doc.get("endpoints") or {}).items():
+            if isinstance(entry, dict):
+                endpoint_subjects[key] = entry.get("subject")
+
     outgoing = resource.get("outgoing_references") or {}
-    incoming = resource.get("incoming_references") or {}
+    incoming_raw = resource.get("incoming_references") or {}
+
+    def _keep_incoming(evs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        kept: list[dict[str, Any]] = []
+        for ev in evs:
+            key = f"{ev.get('method', '')} {ev.get('path', '')}"
+            subject = endpoint_subjects.get(key)
+            if subject in declared_resources or subject == "_unresolved_" or subject is None:
+                # ``subject is None`` covers the case where endpoints_doc
+                # wasn't passed; be permissive rather than silently drop.
+                kept.append(ev)
+        return kept
+
+    incoming = {
+        target: kept
+        for target, evs in incoming_raw.items()
+        if (kept := _keep_incoming(evs))
+    }
+
     all_related = sorted(
         (set(outgoing.keys()) | set(incoming.keys())) - {"_unresolved_"}
     )
@@ -396,9 +486,16 @@ def _format_related(
                 f" — {evidence['kind']}: {evidence['location']}"
             )
         for evidence in incoming.get(related_name, []):
+            key = f"{evidence.get('method', '')} {evidence.get('path', '')}"
+            source_subject = endpoint_subjects.get(key)
+            tag = " (incoming)"
+            if source_subject == "_unresolved_":
+                # Surface unresolved-subject evidence with an explicit tag
+                # so the LLM weights it differently per the prompt preamble.
+                tag = " (incoming, unresolved subject)"
             lines.append(
                 f"  - {evidence['method']} {evidence['path']}"
-                f" — {evidence['kind']}: {evidence['location']} (incoming)"
+                f" — {evidence['kind']}: {evidence['location']}{tag}"
             )
 
         bound_schemas = related_resource.get("bound_schemas") or {}
@@ -462,8 +559,19 @@ def _format_external(
     resource_name: str,
     spec: dict[str, Any] | None,
     config: PipelineConfig,
+    endpoints_doc: dict[str, Any] | None = None,
+    endpoint_filter: set[str] | None = None,
 ) -> str:
-    """Find unbound schemas related to this resource: by $ref or by name tokens."""
+    """Find unbound schemas related to this resource: by $ref or by name tokens.
+
+    With ``endpoint_filter`` and ``endpoints_doc``, the candidate universe
+    is first restricted to schemas reachable (via $ref closure) from the
+    selected endpoints' request and response bodies. Schemas that exist in
+    the spec but the LLM will never encounter while implementing the
+    selection — e.g. ``TaskTemplateRecipe`` when only basic ``/tasks`` CRUD
+    is selected — are dropped, even if their name happens to contain the
+    resource's alias tokens.
+    """
     if spec is None:
         return "_No spec provided — cannot scan for external schemas._"
 
@@ -479,6 +587,30 @@ def _format_external(
     resource_aliases = config.resources.aliases_by_resource.get(resource_name, frozenset())
 
     component_schemas = (spec.get("components") or {}).get("schemas") or {}
+
+    # When an endpoint filter is in effect, restrict the candidate universe
+    # to schemas reachable from selected endpoints' bodies. Use the
+    # extract-stage's normalized refs (``#/schemas/``) to compute the
+    # closure; the resulting set is a superset of what Pass 1 sees, so
+    # External Schemas naturally aligns with the picture the LLM has been
+    # building from Pass 1 onward.
+    if endpoints_doc is not None and endpoint_filter is not None:
+        endpoints_block = endpoints_doc.get("endpoints") or {}
+        all_schemas_doc = endpoints_doc.get("schemas") or {}
+        ref_prefix = "#/schemas/"
+        seeds: set[str] = set()
+        for key in endpoint_filter:
+            entry = endpoints_block.get(key)
+            if entry is None:
+                continue
+            seeds.update(collect_refs(entry.get("responses"), ref_prefix))
+            seeds.update(collect_refs(entry.get("request_body"), ref_prefix))
+        reachable = transitive_closure(seeds, all_schemas_doc, ref_prefix, exclude=set())
+        component_schemas = {
+            name: body for name, body in component_schemas.items()
+            if name in reachable
+        }
+
     external: dict[str, str] = {}
     for schema_name, schema_body in component_schemas.items():
         if schema_name in all_bound:

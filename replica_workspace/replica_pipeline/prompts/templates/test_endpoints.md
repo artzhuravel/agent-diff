@@ -81,21 +81,60 @@ batch.
 
 ## What "verified" means for each endpoint
 
-For every endpoint:
+Every endpoint must conform to its OpenAPI spec entry. For each endpoint
+— **regardless of HTTP method** — verify that every response the spec
+declares can be produced by the implementation, and that the response
+body shape matches the declared schema. The spec is the contract; any
+divergence is a failure.
 
-1. **Happy path** — call it with valid input. Response status must match the
-   declared 2xx code; response body must match the declared schema shape
-   (correct keys, correct types, lists where lists are declared, etc.).
-   Where the endpoint requires referenced rows to exist (e.g. a `project_gid`
-   for a task endpoint), seed them first via the relevant `POST` endpoint.
-2. **Not-found path** — for `GET`, `PUT`, `PATCH`, `DELETE` on a path with a
-   `{...}` parameter, call it with a clearly fake id. Response must be a 404
-   shaped like the `{{APP_NAME}}` error envelope, not a 500.
-3. **Soft-delete consistency** — if an endpoint deletes, a subsequent `GET`
-   for the same id must return 404, not the deleted row.
+The selector is *"what does the spec declare for THIS endpoint"* — never
+*"what HTTP method is THIS endpoint."* The same checks apply to GET,
+POST, PUT, PATCH, DELETE — what differs is which checks the spec
+declares to be applicable.
 
-Skip checks that do not apply (e.g. no not-found check for collection
-`GET /...` endpoints with no path parameter).
+Concrete checks (apply each that the spec declares for the endpoint):
+
+1. **Happy path** — call with valid input. Status matches the declared
+   2xx code; body matches the declared schema (correct keys, types,
+   nesting, required fields present, no extra fields the spec doesn't
+   mention). Where the endpoint requires referenced rows to exist (e.g.
+   a `project_gid` for a task endpoint), seed them first via the
+   relevant POST endpoint.
+
+2. **Every declared error response** — for each 4xx / 5xx the spec
+   lists for the endpoint (400, 401, 403, 404, 422, 429, etc.),
+   construct an input that should trigger that response and verify the
+   correct status code AND the `{{APP_NAME}}` error-envelope body
+   shape. Apply this regardless of the HTTP method:
+
+   - A `POST` whose body is malformed must produce the spec's declared
+     400, not 500.
+   - A `POST`, `PATCH`, `PUT`, or `DELETE` whose path contains a
+     `{...}` parameter referring to a parent or self resource MUST
+     produce a 404 when called with a bogus id — not silently succeed.
+     `POST /tasks/{task_gid}/stories` with a non-existent `task_gid`
+     must 404, not stub-create and return 201.
+   - An unauthenticated request to an endpoint that declares 401 must
+     produce a 401 with the right envelope, not a 500 or 200.
+
+3. **Soft-delete consistency** — for endpoints that delete a resource,
+   a subsequent GET on the same id must return 404, not the deleted
+   row, not a 500.
+
+4. **Spec-divergence is failure** — if you observe ANY behavior that
+   contradicts the spec — wrong status code, wrong response shape,
+   missing required field, extra fields the spec doesn't mention,
+   silent success where 4xx is declared, error envelope that doesn't
+   match the spec — that is a failure, even if it doesn't fit one of
+   the explicit categories above. Apply the fix in `{{TARGET_DIR_RELATIVE}}`
+   within your iteration budget. Silently noting the divergence in the
+   diagnosis without acting on it is not acceptable.
+
+Skip checks that do not apply because the spec doesn't declare them
+(e.g. no 401 check if the spec doesn't list 401 for the endpoint, no
+soft-delete check on a non-delete endpoint, no path-parameter 404 check
+for a flat collection endpoint). Skip-because-spec-doesn't-declare is
+fine; skip-because-of-HTTP-method is not.
 
 ## Output
 

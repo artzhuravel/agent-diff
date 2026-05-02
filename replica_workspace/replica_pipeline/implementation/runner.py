@@ -21,6 +21,8 @@ from pathlib import Path
 
 from replica_pipeline.config import load_config
 from replica_pipeline.prompts.implement import (
+    _model_class_name,
+    _singularize,
     build_extend_prompt,
     build_pass1_prompt,
     build_pass2_prompt,
@@ -66,15 +68,21 @@ def run_implement_responses(ctx) -> None:
             responses_path=responses_path,
         )
 
+        ctx.prompt_dir.mkdir(parents=True, exist_ok=True)
+        (ctx.prompt_dir / "implement_responses.md").write_text(prompt)
+
         if ctx.dry_run:
-            prompt_dir = ctx.prompt_dir
-            prompt_dir.mkdir(parents=True, exist_ok=True)
-            (prompt_dir / "implement_responses.md").write_text(prompt)
-            print(f"  [dry-run] Saved prompt to {prompt_dir}/implement_responses.md")
+            print(f"  [dry-run] Saved prompt to {ctx.prompt_dir}/implement_responses.md")
         else:
             llm_call = make_llm_call(model=ctx.implement_model, timeout=600)
             print(f"  Calling {ctx.implement_model}...")
-            llm_call(prompt)
+            response = llm_call(prompt)
+            (ctx.prompt_dir / "implement_responses.response.txt").write_text(response)
+            if "IMPLEMENTATION FAILED:" in response:
+                for line in response.splitlines():
+                    if "IMPLEMENTATION FAILED:" in line:
+                        print(f"  [error] {line.strip()}")
+                        break
             print(f"  Done.")
 
     constructors = _scan_error_constructors(config.target_dir / "core" / "errors.py")
@@ -203,34 +211,143 @@ def run_implement(ctx) -> None:
         prompt_p2 = (
             build_pass2_prompt(
                 resource_name, resources_doc, endpoints_doc, config, spec=spec,
+                endpoint_filter=endpoint_filter,
             )
             if run_pass2 else None
         )
 
+        # Save both prompts before any LLM dispatch — the file names
+        # carry the stage (``implement``), the resource, and the pass
+        # number so a single ``prompts/`` directory holding mixed
+        # build/extend output stays unambiguous.
+        ctx.prompt_dir.mkdir(parents=True, exist_ok=True)
+        (ctx.prompt_dir / f"implement_{resource_name}_pass1.md").write_text(prompt_p1)
+        if prompt_p2 is not None:
+            (ctx.prompt_dir / f"implement_{resource_name}_pass2.md").write_text(prompt_p2)
+
         if ctx.dry_run:
-            prompt_dir = ctx.prompt_dir
-            prompt_dir.mkdir(parents=True, exist_ok=True)
-            # Filename pattern matches ``run_extend``: pass + purpose so
-            # mixed create/extend dry-runs in the same prompt_dir don't
-            # collide.
-            (prompt_dir / f"{resource_name}_pass1_create.md").write_text(prompt_p1)
-            if prompt_p2 is not None:
-                (prompt_dir / f"{resource_name}_pass2_relationships.md").write_text(prompt_p2)
-            print(f"    [dry-run] Saved prompts to {prompt_dir}")
+            print(f"    [dry-run] Saved prompts to {ctx.prompt_dir}")
             continue
 
         llm_call = make_llm_call(model=ctx.implement_model, timeout=900)
 
+        # Where to expect the LLM's edits to land. We use these to verify
+        # post-pass that the LLM actually applied the work — silent
+        # no-ops by ``claude -p`` were the failure mode in the previous
+        # asana run, and an empty schema.py / routes.py is the
+        # ground-truth indicator that the pass didn't do its job.
+        schema_path = config.target_dir / "database" / "schema.py"
+        routes_path = config.target_dir / "api" / "routes.py"
+        entity_slug = _singularize(resource_name)
+        model_class = _model_class_name(config.app_name, entity_slug)
+        table_name = f"{config.app_slug}_{resource_name}"
+
         print(f"    Pass 1 — base model ({len(prompt_p1):,} chars)...")
-        llm_call(prompt_p1)
+        response_p1 = llm_call(prompt_p1)
+        # Persist response next to the prompt so silent failures are
+        # auditable without re-running. Filename mirrors the prompt's
+        # stem so a quick ``ls prompts/`` shows the pair.
+        (ctx.prompt_dir / f"implement_{resource_name}_pass1.response.txt").write_text(
+            response_p1
+        )
+        _verify_pass1(
+            resource_name, model_class, table_name,
+            schema_path, routes_path, response_p1,
+        )
 
         if prompt_p2 is not None:
             print(f"    Pass 2 — relationships ({len(prompt_p2):,} chars)...")
-            llm_call(prompt_p2)
+            response_p2 = llm_call(prompt_p2)
+            (ctx.prompt_dir / f"implement_{resource_name}_pass2.response.txt").write_text(
+                response_p2
+            )
+            _verify_pass2(resource_name, schema_path, response_p2)
         else:
             print(f"    Pass 2 — skipped (no outgoing FKs)")
 
         print(f"    Done.")
+
+
+def _verify_pass1(
+    resource_name: str,
+    model_class: str,
+    table_name: str,
+    schema_path: Path,
+    routes_path: Path,
+    response: str,
+) -> None:
+    """Spot-check that Pass 1's edits actually landed on disk.
+
+    The ``IMPLEMENTATION FAILED:`` sentinel and the structural checks
+    are independent — the sentinel catches an LLM that explicitly gives
+    up; the structural checks catch the more common silent no-op where
+    the LLM emits prose without invoking Edit/Write.
+    """
+    if "IMPLEMENTATION FAILED:" in response:
+        # Pull the line for the operator.
+        for line in response.splitlines():
+            if "IMPLEMENTATION FAILED:" in line:
+                print(f"    [error] Pass 1 reported: {line.strip()}")
+                break
+        return
+    issues: list[str] = []
+    if schema_path.exists():
+        schema_content = schema_path.read_text()
+        if f"class {model_class}" not in schema_content:
+            issues.append(f"missing `class {model_class}(Base)` in schema.py")
+        if f'__tablename__ = "{table_name}"' not in schema_content:
+            issues.append(f"missing `__tablename__ = \"{table_name}\"` in schema.py")
+    else:
+        issues.append("schema.py does not exist")
+    if routes_path.exists():
+        routes_content = routes_path.read_text()
+        # The scaffold has a single catch-all Route entry. Anything
+        # past that means at least one real handler was registered.
+        real_routes = [
+            line for line in routes_content.splitlines()
+            if line.strip().startswith("Route(")
+            and "_unknown_path" not in line
+        ]
+        if not real_routes:
+            issues.append("no real `Route(...)` entries in routes.py (only the scaffold catch-all)")
+    if issues:
+        print(f"    [warn] Pass 1 for {resource_name} did NOT apply expected edits:")
+        for issue in issues:
+            print(f"           - {issue}")
+        # Don't raise — the operator may want to continue and inspect
+        # responses across resources to spot a systemic problem.
+
+
+def _verify_pass2(
+    resource_name: str,
+    schema_path: Path,
+    response: str,
+) -> None:
+    """Spot-check that Pass 2 produced a relationship signal in schema.py."""
+    if "IMPLEMENTATION FAILED:" in response:
+        for line in response.splitlines():
+            if "IMPLEMENTATION FAILED:" in line:
+                print(f"    [error] Pass 2 reported: {line.strip()}")
+                break
+        return
+    if not schema_path.exists():
+        print(f"    [warn] Pass 2 for {resource_name}: schema.py does not exist")
+        return
+    content = schema_path.read_text()
+    # Either a ForeignKey, a relationship(), or an association Table()
+    # qualifies as "Pass 2 actually did something". This is a weak
+    # check — Pass 2 is allowed to be a no-op when the resource has no
+    # outgoing FKs — but if Pass 2 ran and produced no FK markers at
+    # all, that's worth flagging.
+    has_fk_signal = any(
+        marker in content
+        for marker in ("ForeignKey(", "relationship(")
+    )
+    if not has_fk_signal:
+        print(
+            f"    [warn] Pass 2 for {resource_name} produced no "
+            f"`ForeignKey(...)` or `relationship(...)` in schema.py"
+        )
 
 
 def _resolve_selection(
@@ -463,9 +580,10 @@ def run_extend(ctx) -> None:
                 spec=spec, implemented_constructors=implemented_constructors,
                 endpoint_filter=requested,
             )
-            # Filename pattern: ``{resource}_pass1_{mode}.md`` so a single
-            # prompt_dir mixing CREATE and EXTEND outputs is unambiguous.
-            pass1_filename = f"{resource_name}_pass1_create.md"
+            # Filename carries stage, resource, pass, and mode so a single
+            # ``prompts/`` directory mixing build/extend output and the
+            # extend stage's own create/extend modes stays unambiguous.
+            pass1_filename = f"extend_{resource_name}_pass1_create.md"
         else:
             already = requested & implemented_routes.get(resource_name, set())
             to_add = requested - already
@@ -491,7 +609,7 @@ def run_extend(ctx) -> None:
                 to_add=to_add,
                 already_implemented=implemented_routes.get(resource_name, set()),
             )
-            pass1_filename = f"{resource_name}_pass1_extend.md"
+            pass1_filename = f"extend_{resource_name}_pass1_extend.md"
 
         run_pass2 = _has_outgoing_fks(
             resources_doc["resources"][resource_name], resource_name
@@ -499,27 +617,46 @@ def run_extend(ctx) -> None:
         prompt_p2 = (
             build_pass2_prompt(
                 resource_name, resources_doc, endpoints_doc, config, spec=spec,
+                endpoint_filter=requested,
             )
             if run_pass2 else None
         )
 
+        ctx.prompt_dir.mkdir(parents=True, exist_ok=True)
+        (ctx.prompt_dir / pass1_filename).write_text(prompt_p1)
+        if prompt_p2 is not None:
+            (ctx.prompt_dir / f"extend_{resource_name}_pass2.md").write_text(prompt_p2)
+
         if ctx.dry_run:
-            prompt_dir = ctx.prompt_dir
-            prompt_dir.mkdir(parents=True, exist_ok=True)
-            (prompt_dir / pass1_filename).write_text(prompt_p1)
-            if prompt_p2 is not None:
-                (prompt_dir / f"{resource_name}_pass2_relationships.md").write_text(prompt_p2)
-            print(f"    [dry-run] Saved prompts to {prompt_dir}")
+            print(f"    [dry-run] Saved prompts to {ctx.prompt_dir}")
             continue
 
         llm_call = make_llm_call(model=ctx.implement_model, timeout=900)
 
+        # Stem of the prompt filename (without ``.md``) so the response
+        # filename pairs cleanly: ``foo.md`` → ``foo.response.txt``.
+        pass1_stem = pass1_filename[:-3] if pass1_filename.endswith(".md") else pass1_filename
+
         print(f"    Pass 1 ({len(prompt_p1):,} chars)...")
-        llm_call(prompt_p1)
+        response_p1 = llm_call(prompt_p1)
+        (ctx.prompt_dir / f"{pass1_stem}.response.txt").write_text(response_p1)
+        if "IMPLEMENTATION FAILED:" in response_p1:
+            for line in response_p1.splitlines():
+                if "IMPLEMENTATION FAILED:" in line:
+                    print(f"    [error] Pass 1 reported: {line.strip()}")
+                    break
 
         if prompt_p2 is not None:
             print(f"    Pass 2 — relationships ({len(prompt_p2):,} chars)...")
-            llm_call(prompt_p2)
+            response_p2 = llm_call(prompt_p2)
+            (ctx.prompt_dir / f"extend_{resource_name}_pass2.response.txt").write_text(
+                response_p2
+            )
+            if "IMPLEMENTATION FAILED:" in response_p2:
+                for line in response_p2.splitlines():
+                    if "IMPLEMENTATION FAILED:" in line:
+                        print(f"    [error] Pass 2 reported: {line.strip()}")
+                        break
         else:
             print(f"    Pass 2 — skipped (no outgoing FKs)")
 
