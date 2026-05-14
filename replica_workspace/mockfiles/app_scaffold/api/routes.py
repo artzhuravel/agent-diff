@@ -110,20 +110,52 @@ def _pagination_params(request: Request) -> tuple[str | None, int]:
 # ---------------------------------------------------------------------------
 #
 # Any request whose path does not match a real route in the table below
-# lands here. Returning the replica's native not-found envelope (via
-# ``not_found().to_response()``) means agents calling unimplemented
-# endpoints during development receive a response that is shape-compatible
-# with the target API, instead of Starlette's default plain-text
-# ``"Not Found"`` or — worse — an IsolationMiddleware 500.
+# lands here. Returns a 404 with the app's native error envelope, so an
+# agent calling an unimplemented endpoint during development sees a
+# response that is shape-indistinguishable from a real upstream "no such
+# endpoint" 404 — not Starlette's default plain-text ``"Not Found"`` and
+# not the IsolationMiddleware's ``{"ok": false, "error": "internal_error"}``
+# 500 (which would otherwise fire if anything in this handler raised).
 #
-# This makes the replica behave authentically even before every endpoint
-# has been implemented: the agent cannot tell from the shape of a 404
-# whether the endpoint is unimplemented or genuinely missing upstream.
+# We construct the AppAPIError directly here rather than calling the
+# convenience helper ``not_found(...)``. Two reasons:
+#
+#   1. Per-app convention varies. Some apps' generated ``not_found(...)``
+#      returns an ``AppAPIError`` instance (raise-safe, has ``to_response``).
+#      Others return a ``JSONResponse`` directly. Calling ``.to_response()``
+#      on a JSONResponse blows up with AttributeError, which the platform
+#      middleware then catches as an unhandled exception and rewrites to a
+#      generic 500. Going through ``AppAPIError(...)`` directly is the one
+#      shape that's safe regardless of which convention the implement
+#      stage chose.
+#   2. It's the same pattern the request helpers above use (``_session``,
+#      ``_principal_user_id``, ``_parse_json_body``). Consistent.
+
+def _api_relative_path(full_path: str) -> str:
+    """Strip the platform's env-routing prefix to get the API-relative path.
+
+    Requests reach this handler with paths like
+    ``/api/env/<env_id>/services/<service_name>/<rest>``. The
+    ``<rest>`` portion is what an agent would see if it were talking to
+    the real upstream API. Echoing the env-routing prefix in error
+    messages would tip the agent off that it's running against a
+    multi-tenant replica platform rather than the upstream itself.
+    """
+    if "/services/" in full_path:
+        parts = full_path.split("/services/", 1)
+        after_services = parts[1]
+        slash_index = after_services.find("/")
+        if slash_index >= 0:
+            return after_services[slash_index:]
+        return "/"
+    return full_path
+
 
 async def unknown_endpoint(request: Request) -> JSONResponse:
     """Catch-all handler for requests that match no real route."""
-    return not_found(
-        f"Endpoint not found: {request.method} {request.url.path}"
+    return AppAPIError(
+        message=f"Endpoint not found: {request.method} {_api_relative_path(request.url.path)}",
+        http_code=status.HTTP_404_NOT_FOUND,
     ).to_response()
 
 

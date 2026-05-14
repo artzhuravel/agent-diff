@@ -251,12 +251,14 @@ async def list_projects(request: Request) -> JSONResponse:
 async def create_project(request: Request) -> JSONResponse:
     try:
         session = _session(request)
-        _principal_user_id(request)
+        creator_gid = _principal_user_id(request)
         body = await _parse_json_body(request)
         data = body.get("data", {})
         if not isinstance(data, dict):
             raise AppAPIError("Request body must contain a 'data' object")
-        project = ops.create_project(session, data)
+        project = ops.create_project(session, data, creator_gid=creator_gid)
+        # Reload with relationships so serializer can emit names
+        project = ops.get_project(session, project.gid)
         return JSONResponse(
             {"data": serialize_project(project)},
             status_code=status.HTTP_201_CREATED,
@@ -373,6 +375,8 @@ async def create_section(request: Request) -> JSONResponse:
                 message=f"Project {project_gid} not found",
                 http_code=status.HTTP_404_NOT_FOUND,
             )
+        # Reload with project relationship so serializer can emit project name
+        section = ops.get_section(session, section.gid)
         return JSONResponse(
             {"data": serialize_section(section)},
             status_code=status.HTTP_201_CREATED,
@@ -482,7 +486,7 @@ async def delete_story(request: Request) -> JSONResponse:
 async def create_task_story(request: Request) -> JSONResponse:
     try:
         session = _session(request)
-        _principal_user_id(request)
+        creator_gid = _principal_user_id(request)
         task_gid = request.path_params["task_gid"]
         if ops.get_task(session, task_gid) is None:
             raise AppAPIError(f"Task {task_gid} not found", http_code=status.HTTP_404_NOT_FOUND)
@@ -490,7 +494,9 @@ async def create_task_story(request: Request) -> JSONResponse:
         data = body.get("data", {})
         if not isinstance(data, dict):
             raise AppAPIError("Request body must contain a 'data' object")
-        story = ops.create_story(session, task_gid, data)
+        story = ops.create_story(session, task_gid, data, creator_gid=creator_gid)
+        # Reload with relationships so serializer can emit created_by name and target
+        story = ops.get_story(session, story.gid)
         return JSONResponse(
             {"data": serialize_story(story)},
             status_code=status.HTTP_201_CREATED,
@@ -541,12 +547,14 @@ async def list_tasks(request: Request) -> JSONResponse:
 async def create_task(request: Request) -> JSONResponse:
     try:
         session = _session(request)
-        _principal_user_id(request)
+        creator_gid = _principal_user_id(request)
         body = await _parse_json_body(request)
         data = body.get("data", {})
         if not isinstance(data, dict):
             raise AppAPIError("Request body must contain a 'data' object")
-        task = ops.create_task(session, data)
+        task = ops.create_task(session, data, creator_gid=creator_gid)
+        # Reload with relationships so serializer can emit names
+        task = ops.get_task(session, task.gid)
         return JSONResponse(
             {"data": serialize_task(task)},
             status_code=status.HTTP_201_CREATED,
@@ -684,6 +692,7 @@ async def list_subtasks(request: Request) -> JSONResponse:
                 tasks,
                 next_offset,
                 path_prefix=f"/tasks/{task_gid}/subtasks",
+                compact=True,
             ),
             status_code=status.HTTP_200_OK,
         )
@@ -822,18 +831,48 @@ async def list_workspace_tags(request: Request) -> JSONResponse:
         return handle_exception(exc)
 
 
-async def create_subtask(request: Request) -> JSONResponse:
+async def create_workspace_tag(request: Request) -> JSONResponse:
+    """POST /workspaces/{workspace_gid}/tags — create a tag scoped to a workspace."""
     try:
         session = _session(request)
         _principal_user_id(request)
+        workspace_gid = request.path_params["workspace_gid"]
+        if ops.get_workspace(session, workspace_gid) is None:
+            raise AppAPIError(f"Workspace {workspace_gid} not found", http_code=status.HTTP_404_NOT_FOUND)
+        body = await _parse_json_body(request)
+        data = body.get("data", {})
+        if not isinstance(data, dict):
+            raise AppAPIError("Request body must contain a 'data' object")
+        # Inject the workspace so create_tag wires the FK correctly
+        data = dict(data)
+        data["workspace"] = workspace_gid
+        tag = ops.create_tag(session, data)
+        # Reload with workspace relationship so serializer can emit workspace name
+        tag = ops.get_tag(session, tag.gid)
+        return JSONResponse(
+            {"data": serialize_tag(tag)},
+            status_code=status.HTTP_201_CREATED,
+        )
+    except AppAPIError as exc:
+        return exc.to_response()
+    except Exception as exc:
+        return handle_exception(exc)
+
+
+async def create_subtask(request: Request) -> JSONResponse:
+    try:
+        session = _session(request)
+        creator_gid = _principal_user_id(request)
         task_gid = request.path_params["task_gid"]
         body = await _parse_json_body(request)
         data = body.get("data", {})
         if not isinstance(data, dict):
             raise AppAPIError("Request body must contain a 'data' object")
-        task = ops.create_subtask(session, task_gid, data)
+        task = ops.create_subtask(session, task_gid, data, creator_gid=creator_gid)
         if task is None:
             raise AppAPIError(f"Task {task_gid} not found", http_code=status.HTTP_404_NOT_FOUND)
+        # Reload with relationships so serializer can emit names
+        task = ops.get_task(session, task.gid)
         return JSONResponse(
             {"data": serialize_task(task)},
             status_code=status.HTTP_201_CREATED,
@@ -849,20 +888,47 @@ async def create_subtask(request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 #
 # Any request whose path does not match a real route in the table below
-# lands here. Returning the replica's native not-found envelope (via
-# ``not_found().to_response()``) means agents calling unimplemented
-# endpoints during development receive a response that is shape-compatible
-# with the target API, instead of Starlette's default plain-text
-# ``"Not Found"`` or — worse — an IsolationMiddleware 500.
+# lands here. Returns a 404 with the app's native error envelope, so an
+# agent calling an unimplemented endpoint sees a response that's
+# shape-indistinguishable from a real upstream "no such endpoint" 404 —
+# not Starlette's default plain-text ``"Not Found"`` and not the
+# IsolationMiddleware's ``{"ok": false, "error": "internal_error"}`` 500
+# (which would otherwise fire if anything in this handler raised).
 #
-# This makes the replica behave authentically even before every endpoint
-# has been implemented: the agent cannot tell from the shape of a 404
-# whether the endpoint is unimplemented or genuinely missing upstream.
+# We construct the AppAPIError directly here rather than calling the
+# convenience helper ``not_found(...)``. Asana's ``not_found`` returns
+# a ``JSONResponse`` directly (not an ``AppAPIError`` instance); calling
+# ``.to_response()`` on that JSONResponse raises AttributeError, which
+# the platform middleware catches and rewrites to a generic 500.
+# Going through ``AppAPIError(...)`` directly avoids that landmine and
+# keeps behavior consistent with the request helpers above
+# (``_session``, ``_principal_user_id``, ``_parse_json_body``), which all
+# raise ``AppAPIError`` rather than calling per-status constructors.
+
+def _api_relative_path(full_path: str) -> str:
+    """Strip the platform's env-routing prefix to get the API-relative path.
+
+    Requests reach this handler with paths like
+    ``/api/env/<env_id>/services/asana/<rest>``. The ``<rest>`` portion is
+    what an agent would see if it were talking to the real Asana API.
+    Echoing the env-routing prefix in error messages would tip the agent
+    off that it's running against a multi-tenant replica platform.
+    """
+    if "/services/" in full_path:
+        parts = full_path.split("/services/", 1)
+        after_services = parts[1]
+        slash_index = after_services.find("/")
+        if slash_index >= 0:
+            return after_services[slash_index:]
+        return "/"
+    return full_path
+
 
 async def unknown_endpoint(request: Request) -> JSONResponse:
     """Catch-all handler for requests that match no real route."""
-    return not_found(
-        f"Endpoint not found: {request.method} {request.url.path}"
+    return AppAPIError(
+        message=f"Endpoint not found: {request.method} {_api_relative_path(request.url.path)}",
+        http_code=status.HTTP_404_NOT_FOUND,
     ).to_response()
 
 
@@ -925,6 +991,7 @@ routes: list[Route] = [
     Route("/tags", list_tags, methods=["GET"]),
     Route("/tags", create_tag, methods=["POST"]),
     Route("/workspaces/{workspace_gid}/tags", list_workspace_tags, methods=["GET"]),
+    Route("/workspaces/{workspace_gid}/tags", create_workspace_tag, methods=["POST"]),
     Route("/tags/{tag_gid}", get_tag, methods=["GET"]),
     Route("/tags/{tag_gid}", update_tag, methods=["PUT"]),
     Route("/tags/{tag_gid}", delete_tag, methods=["DELETE"]),
